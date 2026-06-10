@@ -150,6 +150,12 @@ export default {
       gridGuideVisible: false,
       projectStartVisible: true,
       recentProjects: [],
+      touchGesture: {
+        active: false,
+        x: 0,
+        y: 0,
+        distance: 0,
+      },
     };
   },
   emits: ["modal-set", "selected-canvas-shape"],
@@ -220,6 +226,22 @@ export default {
       cameraControls.maxZoom = 4000;
       cameraControls.minZoom = 1.5;
       cameraControls.enabled = true;
+      renderer.domElement.addEventListener("touchstart", this.handleCanvasTouchStart, {
+        capture: true,
+        passive: false,
+      });
+      renderer.domElement.addEventListener("touchmove", this.handleCanvasTouchMove, {
+        capture: true,
+        passive: false,
+      });
+      renderer.domElement.addEventListener("touchend", this.handleCanvasTouchEnd, {
+        capture: true,
+        passive: false,
+      });
+      renderer.domElement.addEventListener("touchcancel", this.handleCanvasTouchEnd, {
+        capture: true,
+        passive: false,
+      });
 
       this.quaternion = [
         camera.quaternion.x,
@@ -324,6 +346,63 @@ export default {
 
       renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
       renderer.render(scene, camera);
+    },
+    getTwoFingerGesture: function (event) {
+      const first = event.touches[0];
+      const second = event.touches[1];
+      const x = (first.clientX + second.clientX) / 2;
+      const y = (first.clientY + second.clientY) / 2;
+      const dx = second.clientX - first.clientX;
+      const dy = second.clientY - first.clientY;
+
+      return {
+        x,
+        y,
+        distance: Math.sqrt(dx * dx + dy * dy),
+      };
+    },
+    handleCanvasTouchStart: function (event) {
+      if (event.touches.length !== 2 || !cameraControls?.enabled) return;
+
+      const gesture = this.getTwoFingerGesture(event);
+      this.touchGesture = {
+        active: true,
+        x: gesture.x,
+        y: gesture.y,
+        distance: gesture.distance,
+      };
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    },
+    handleCanvasTouchMove: function (event) {
+      if (!this.touchGesture.active || event.touches.length !== 2) return;
+
+      const gesture = this.getTwoFingerGesture(event);
+      const deltaX = gesture.x - this.touchGesture.x;
+      const deltaY = gesture.y - this.touchGesture.y;
+      const distanceDelta = gesture.distance - this.touchGesture.distance;
+      const rotateScale = (Math.PI * 2) / Math.max(window.innerWidth, 1);
+      const zoomScale = 0.012;
+
+      cameraControls.rotate(-deltaX * rotateScale, -deltaY * rotateScale, true);
+      cameraControls.zoom(distanceDelta * zoomScale, true);
+
+      this.touchGesture = {
+        active: true,
+        x: gesture.x,
+        y: gesture.y,
+        distance: gesture.distance,
+      };
+      this.cameraZoomPercent = Math.round((camera.zoom / 3) * 100);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    },
+    handleCanvasTouchEnd: function (event) {
+      if (!this.touchGesture.active) return;
+
+      this.touchGesture.active = false;
+      event.preventDefault();
+      event.stopImmediatePropagation();
     },
     loadProjectStart: function () {
       listRecentProjects().then((projects) => {
