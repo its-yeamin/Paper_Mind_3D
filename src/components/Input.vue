@@ -611,7 +611,6 @@ export default {
 #threed {
   width: 100%;
   height: 100%;
-  touch-action: none;
 }
 
 .pen-hover-indicator {
