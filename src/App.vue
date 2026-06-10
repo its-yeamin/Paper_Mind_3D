@@ -226,19 +226,19 @@ export default {
       cameraControls.maxZoom = 4000;
       cameraControls.minZoom = 1.5;
       cameraControls.enabled = true;
-      renderer.domElement.addEventListener("touchstart", this.handleCanvasTouchStart, {
+      main.addEventListener("touchstart", this.handleCanvasTouchStart, {
         capture: true,
         passive: false,
       });
-      renderer.domElement.addEventListener("touchmove", this.handleCanvasTouchMove, {
+      main.addEventListener("touchmove", this.handleCanvasTouchMove, {
         capture: true,
         passive: false,
       });
-      renderer.domElement.addEventListener("touchend", this.handleCanvasTouchEnd, {
+      main.addEventListener("touchend", this.handleCanvasTouchEnd, {
         capture: true,
         passive: false,
       });
-      renderer.domElement.addEventListener("touchcancel", this.handleCanvasTouchEnd, {
+      main.addEventListener("touchcancel", this.handleCanvasTouchEnd, {
         capture: true,
         passive: false,
       });
@@ -384,8 +384,8 @@ export default {
       const rotateScale = (Math.PI * 2) / Math.max(window.innerWidth, 1);
       const zoomScale = 0.012;
 
-      cameraControls.rotate(-deltaX * rotateScale, -deltaY * rotateScale, true);
-      cameraControls.zoom(distanceDelta * zoomScale, true);
+      cameraControls.rotate(-deltaX * rotateScale, -deltaY * rotateScale, false);
+      cameraControls.zoom(distanceDelta * zoomScale, false);
 
       this.touchGesture = {
         active: true,
