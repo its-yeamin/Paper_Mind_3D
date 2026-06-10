@@ -133,16 +133,25 @@
         <img src="@/assets/icons/snapOn.svg" alt="Turn on snap" />Snap on</span
       ></span
     >
-    <span
-      class="canvas-button center-tools"
+    <div
+      class="center-row"
       v-if="!shapeSelectionVisibility"
       v-bind:class="[!visible ? 'disabled' : '']"
     >
-      <button type="button" @click="resetToMainCenter">Main</button>
-      <button type="button" @click="useNewCenter">
+      <span
+        v-bind:class="[transformationResetDisabled ? 'disabled ' : '']"
+        class="canvas-button"
+        @click="resetTransformation()"
+      >
+        <img
+          src="@/assets/icons/reset.svg"
+          alt="Reset canvas position, rotation and scale"
+        />
+      </span>
+      <button class="new-center-button" type="button" @click="useNewCenter">
         {{ hasNewCenter ? "New" : "Set New" }}
       </button>
-    </span>
+    </div>
     <span
       class="canvas-button image-tools"
       v-if="!shapeSelectionVisibility"
@@ -339,11 +348,6 @@ export default {
       startPosition: new THREE.Vector3(0.001, 0.001, 0.001),
       startQuaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
       startScale: new THREE.Vector3(1, 1, 1),
-      mainCenter: {
-        position: new THREE.Vector3(0.001, 0.001, 0.001),
-        quaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
-        scale: new THREE.Vector3(1, 1, 1),
-      },
       newCenter: undefined,
       hasNewCenter: false,
       transformationResetDisabled: true,
@@ -1042,10 +1046,6 @@ export default {
       });
       this.transformationResetDisabled = true;
     },
-    resetToMainCenter() {
-      this.applyCanvasTransform(this.mainCenter);
-      this.transformationResetDisabled = true;
-    },
     useNewCenter() {
       if (!this.hasNewCenter) {
         this.newCenter = this.getCanvasTransform();
@@ -1385,30 +1385,28 @@ export default {
   padding: 0px 2px;
 }
 
-.center-tools {
-  height: auto;
-  border-radius: 8px;
-  gap: 4px;
-  padding: 6px 8px;
-  flex-direction: column;
-  align-items: stretch;
+.center-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   align-self: flex-start;
 }
 
-.center-tools button {
-  min-width: 82px;
-  height: 24px;
+.new-center-button {
+  min-width: 72px;
+  height: 44px;
   border: 0;
-  border-radius: 4px;
-  background-color: transparent;
+  border-radius: 22px;
+  background-color: #ffffff;
   color: #1c1c1e;
-  font-size: 0.38em;
+  font-size: 0.72em;
   font-weight: 900;
-  padding: 0 6px;
+  padding: 0 12px;
+  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
 }
 
-.center-tools button:hover,
-.center-tools button:focus {
+.new-center-button:hover,
+.new-center-button:focus {
   background-color: #ffe8b3;
 }
 
