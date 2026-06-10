@@ -48,8 +48,6 @@ export default {
           json.push(line);
         }
       });
-      console.log(json);
-
       var dataStr =
         "data:text/json;charset=utf-8," +
         encodeURIComponent(JSON.stringify(json));

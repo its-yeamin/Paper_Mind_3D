@@ -152,9 +152,9 @@ let select = {
             this.selector.cssStart.x = cx;
             this.selector.cssStart.y = cy;
         }
-        move(cx, cy) {
+        move() {
             if (this.selected.length == 0) {
-                console.log(cx, cy)
+                return
             }
         }
         end(tx, ty) {
@@ -189,14 +189,12 @@ let select = {
                 previouslySelected.push(object.uuid)
             })
 
-            undoManager.add({
-                undo: function () {
-                    console.log("undoing select")
+                undoManager.add({
+                    undo: function () {
                     select.s.deselect();
                     renderer.render(scene, camera);
                 },
                 redo: function () {
-                    console.log("redoing select")
                     let selection = [];
                     previouslySelected.forEach(uuid => {
                         selection.push(scene.getObjectByProperty(
@@ -529,7 +527,6 @@ let select = {
                 //TODO: deselect should update setTransformationToolbar on its own
                 undoManager.add({
                     undo: function () {
-                        console.log("undoing deselect")
                         let selection = [];
                         previouslySelected.forEach(uuid => {
                             selection.push(scene.getObjectByProperty(
@@ -542,9 +539,6 @@ let select = {
                         renderer.render(scene, camera);
                     },
                     redo: function () {
-
-                        console.log("redo deselect")
-
                         select.s.deselect()
                         renderer.render(scene, camera);
                     }
@@ -600,7 +594,6 @@ let select = {
                 case this.controls.object.type == "Mesh":
                     previousSelectedArray.push(this.controls.object.uuid);
                     var duplicate = this.controls.object.clone();
-                    console.log(duplicate.userData.stroke)
                     var duplicateMaterial = new MeshLineMaterial({
                         lineWidth: duplicate.userData.stroke.show_stroke ? duplicate.userData.stroke.lineWidth : 0.005,
                         sizeAttenuation: 1,
@@ -667,7 +660,6 @@ let select = {
 
             undoManager.add({
                 undo: function () {
-                    console.log("undoing duplicate")
                     //deselect the current selection
                     select.s.deselect_internal();
                     duplicateArray.forEach(object => {
@@ -685,9 +677,6 @@ let select = {
                     renderer.render(scene, camera);
                 },
                 redo: function () {
-
-                    console.log("redoing duplicate")
-
                     select.s.duplicate();
                     renderer.render(scene, camera);
                 }

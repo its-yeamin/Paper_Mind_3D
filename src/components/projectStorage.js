@@ -345,8 +345,8 @@ export function saveCurrentProject() {
       ).then(() => writeProjectToFileHandle(fileHandle, project));
     })
     .catch((error) => {
-    console.warn("Could not save project locally", error);
-  });
+      console.warn("Could not save project locally", error);
+    });
 }
 
 export function scheduleAutoSave() {
@@ -421,6 +421,28 @@ export function createNewProject(name, fileHandle) {
   );
 }
 
+export function createProjectFromBackup(data, name) {
+  const id = createProjectId();
+  const project = normalizeProject(data);
+  project.name = normalizeProjectName(name || project.name);
+  project.savedAt = new Date().toISOString();
+
+  restoreProject(project, true);
+
+  activeProjectId = id;
+  window.localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+
+  return runTransaction("readwrite", (store) =>
+    store.put({
+      id,
+      name: project.name,
+      updatedAt: project.savedAt,
+      project,
+      fileHandle: undefined,
+    })
+  );
+}
+
 export function openRecentProject(id) {
   return runTransaction("readonly", (store) => store.get(id)).then((record) => {
     if (!record) return false;
@@ -435,15 +457,20 @@ export function openRecentProject(id) {
 export async function pickProjectFile(name) {
   if (!window.showSaveFilePicker) return undefined;
 
-  return window.showSaveFilePicker({
-    suggestedName: normalizeProjectName(name) + ".penzil",
-    types: [
-      {
-        description: "Penzil project",
-        accept: { "application/json": [".penzil", ".json"] },
-      },
-    ],
-  });
+  try {
+    return await window.showSaveFilePicker({
+      suggestedName: normalizeProjectName(name) + ".penzil",
+      types: [
+        {
+          description: "Penzil project",
+          accept: { "application/json": [".penzil", ".json"] },
+        },
+      ],
+    });
+  } catch (error) {
+    if (error.name === "AbortError") return undefined;
+    throw error;
+  }
 }
 
 export async function exportProjectWithPicker(project, name) {
@@ -451,6 +478,8 @@ export async function exportProjectWithPicker(project, name) {
 
   if (window.showSaveFilePicker) {
     const handle = await pickProjectFile(name || project.name || "Untitled");
+    if (!handle) return;
+
     const writable = await handle.createWritable();
     await writable.write(data);
     await writable.close();

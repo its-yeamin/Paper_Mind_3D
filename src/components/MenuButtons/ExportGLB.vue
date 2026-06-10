@@ -48,7 +48,6 @@ export default {
       sceneGLTF.add(group);
       sceneGLTF.scale.set(0.1, 0.1, 0.1);
       sceneGLTF.updateMatrixWorld(true);
-      console.log(sceneGLTF);
 
       const exporter = new GLTFExporter();
       exporter.parse(

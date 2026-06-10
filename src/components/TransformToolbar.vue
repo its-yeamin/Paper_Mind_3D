@@ -90,7 +90,6 @@ export default {
       }
       if (this.selectedTool == "model") {
         let controls = scene.getObjectByName("canvasTransformControls");
-        console.log(controls);
         this.selectedTransformation = val;
         controls.mode = this.selectedTransformation;
       }

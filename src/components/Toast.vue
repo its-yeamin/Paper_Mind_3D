@@ -15,8 +15,7 @@ export default {
   watch: {
     show: function (val) {
       if (val == true) {
-        console.log(this.show);
-        setTimeout(function () {
+        setTimeout(() => {
           this.show = false;
         }, 2000);
       }

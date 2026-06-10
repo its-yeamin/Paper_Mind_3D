@@ -124,11 +124,7 @@ export default {
       //nothing;
     }
   },
-  watch: {
-    touches: function (val) {
-      console.log(val);
-    },
-  },
+  watch: {},
   mounted() {},
 };
 </script>

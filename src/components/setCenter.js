@@ -26,7 +26,6 @@ let setCenter = {
         }
 
         cameraControls.moveTo(newTarget.x, newTarget.y, newTarget.z, true)
-        console.log(vm.$.ctx)
         vm.$.ctx.setPreviouslySelectedTool();
     }
 }

@@ -4,9 +4,7 @@
 
 <script>
 import {
-  restoreProject,
-  saveCurrentProject,
-  normalizeProject,
+  createProjectFromBackup,
 } from "../projectStorage.js";
 
 export default {
@@ -28,9 +26,8 @@ export default {
       input.onchange = (event) => {
         file = event.target.files[0];
         function onReaderLoad(event) {
-          var project = normalizeProject(JSON.parse(event.target.result));
-          restoreProject(project, true);
-          saveCurrentProject();
+          var project = JSON.parse(event.target.result);
+          createProjectFromBackup(project, file.name.replace(/\.(penzil|json)$/i, ""));
         }
         if (
           file.type == "application/json" ||

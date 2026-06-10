@@ -134,18 +134,14 @@
       ></span
     >
     <span
-      v-bind:class="[
-        transformationResetDisabled ? 'disabled ' : '',
-        !visible ? 'disabled' : '',
-      ]"
-      class="canvas-button"
-      @click="resetTransformation()"
+      class="canvas-button center-tools"
       v-if="!shapeSelectionVisibility"
+      v-bind:class="[!visible ? 'disabled' : '']"
     >
-      <img
-        src="@/assets/icons/reset.svg"
-        alt="Reset canvas position, rotation and scale"
-      />
+      <button type="button" @click="resetToMainCenter">Main</button>
+      <button type="button" @click="useNewCenter">
+        {{ hasNewCenter ? "New" : "Set New" }}
+      </button>
     </span>
     <span
       class="canvas-button image-tools"
@@ -343,6 +339,13 @@ export default {
       startPosition: new THREE.Vector3(0.001, 0.001, 0.001),
       startQuaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
       startScale: new THREE.Vector3(1, 1, 1),
+      mainCenter: {
+        position: new THREE.Vector3(0.001, 0.001, 0.001),
+        quaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
+        scale: new THREE.Vector3(1, 1, 1),
+      },
+      newCenter: undefined,
+      hasNewCenter: false,
       transformationResetDisabled: true,
       transformationEnabled: true,
       visible: true,
@@ -1016,22 +1019,41 @@ export default {
 
       this.setSelectedImageScale((image.userData.image.scalePercent || 100) + amount);
     },
-    resetTransformation() {
-      canvas.position.set(
-        this.startPosition.x,
-        this.startPosition.y,
-        this.startPosition.z
-      );
-      canvas.quaternion.set(
-        this.startQuaternion.x,
-        this.startQuaternion.y,
-        this.startQuaternion.z,
-        this.startQuaternion.w
-      );
-      canvas.scale.set(this.startScale.x, this.startScale.y, this.startScale.z);
+    getCanvasTransform() {
+      return {
+        position: canvas.position.clone(),
+        quaternion: canvas.quaternion.clone(),
+        scale: canvas.scale.clone(),
+      };
+    },
+    applyCanvasTransform(transform) {
+      canvas.position.copy(transform.position);
+      canvas.quaternion.copy(transform.quaternion);
+      canvas.scale.copy(transform.scale);
       this.updateRotationReadout();
       this.updateImagePresentation();
       renderer.render(scene, camera);
+    },
+    resetTransformation() {
+      this.applyCanvasTransform({
+        position: this.startPosition,
+        quaternion: this.startQuaternion,
+        scale: this.startScale,
+      });
+      this.transformationResetDisabled = true;
+    },
+    resetToMainCenter() {
+      this.applyCanvasTransform(this.mainCenter);
+      this.transformationResetDisabled = true;
+    },
+    useNewCenter() {
+      if (!this.hasNewCenter) {
+        this.newCenter = this.getCanvasTransform();
+        this.hasNewCenter = true;
+        return;
+      }
+
+      this.applyCanvasTransform(this.newCenter);
       this.transformationResetDisabled = true;
     },
     restoreTransformation() {
@@ -1361,6 +1383,33 @@ export default {
 
 .transform-mode {
   padding: 0px 2px;
+}
+
+.center-tools {
+  height: auto;
+  border-radius: 8px;
+  gap: 4px;
+  padding: 6px 8px;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: flex-start;
+}
+
+.center-tools button {
+  min-width: 82px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #1c1c1e;
+  font-size: 0.38em;
+  font-weight: 900;
+  padding: 0 6px;
+}
+
+.center-tools button:hover,
+.center-tools button:focus {
+  background-color: #ffe8b3;
 }
 
 .image-tools {

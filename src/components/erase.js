@@ -4,7 +4,7 @@ import { mirror } from "./mirror.js"
 import { MeshLineMaterial } from "meshline";
 import { draw } from "./draw.js";
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue"
-import { disposeImagePlane } from "./imagePlane.js";
+import { createImagePlane, disposeImagePlane } from "./imagePlane.js";
 
 let erase = {
     e: undefined,
@@ -234,7 +234,40 @@ let erase = {
         ) == undefined) { return }
 
         if (object.userData.kind === "imagePlane") {
+            let imageState = {
+                uuid: object.uuid,
+                src: object.userData.image.src,
+                width: object.userData.image.width,
+                height: object.userData.image.height,
+                scalePercent: object.userData.image.scalePercent,
+                position: object.position.clone(),
+                quaternion: object.quaternion.clone(),
+                scale: object.scale.clone(),
+                canvas: object.userData.canvas,
+            };
+
             disposeImagePlane(object);
+
+            undoManager.add({
+                undo: function () {
+                    let restored = createImagePlane(imageState);
+                    restored.uuid = imageState.uuid;
+                    renderer.render(scene, camera);
+                },
+                redo: function () {
+                    let image = scene.getObjectByProperty(
+                        "uuid",
+                        imageState.uuid
+                    );
+
+                    if (image) {
+                        disposeImagePlane(image);
+                    }
+                    renderer.render(scene, camera);
+                }
+            });
+
+            undoRedoComponent.$.ctx.updateUi();
             renderer.render(scene, camera);
             window.dispatchEvent(new CustomEvent("penzil-project-change"));
             return

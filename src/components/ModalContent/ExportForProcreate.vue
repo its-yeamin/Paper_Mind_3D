@@ -266,8 +266,6 @@ export default {
         const offset = 1 / cells;
         let count = 0;
 
-        console.log({ uvs_length: uvs.length, cells: cells, offset: offset });
-
         for (let y = 0; y < cells; y++) {
           for (let x = 0; x < cells; x++) {
             let i = count;

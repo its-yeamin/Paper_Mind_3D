@@ -43,11 +43,7 @@ export default {
       this.$emit("modal-set", { show: false, mode: "about" });
     },
   },
-  watch: {
-    modalProp: function (val) {
-      console.log(val);
-    },
-  },
+  watch: {},
 };
 </script>
 

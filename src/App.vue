@@ -259,6 +259,8 @@ export default {
         capture: true,
         passive: false,
       });
+      window.addEventListener("blur", this.resetCanvasPointerGesture);
+      document.addEventListener("visibilitychange", this.handleVisibilityChange);
 
       this.quaternion = [
         camera.quaternion.x,
@@ -506,6 +508,15 @@ export default {
       if (wasCameraGesture) {
         event.preventDefault();
         event.stopImmediatePropagation();
+      }
+    },
+    resetCanvasPointerGesture: function () {
+      touchPointers.clear();
+      this.touchGesture.active = false;
+    },
+    handleVisibilityChange: function () {
+      if (document.hidden) {
+        this.resetCanvasPointerGesture();
       }
     },
     loadProjectStart: function () {
