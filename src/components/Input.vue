@@ -142,7 +142,10 @@ export default {
     },
     isPrimaryInputMove: function (event) {
       if (event.pointerType) {
-        return this.isPenPointer(event) && event.buttons === 1;
+        return (
+          this.isPenPointer(event) &&
+          (event.buttons === 1 || event.pressure > 0)
+        );
       }
 
       return event.button == 0 || event.touches?.length == 1;
@@ -463,7 +466,9 @@ export default {
     },
     handleInput: function (event) {
       if (event.pointerType) {
-        if (event.pointerType !== "pen") return;
+        if (event.pointerType !== "pen") {
+          return;
+        }
 
         this.updateMouseCoordinates(event);
 

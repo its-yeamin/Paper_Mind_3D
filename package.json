@@ -5,13 +5,15 @@
   "scripts": {
     "serve": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service serve",
     "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "camera-controls": "1.25.3",
     "caniuse-lite": "^1.0.30001248",
-    "cross-env": "^7.0.3",
     "core-js": "^3.6.5",
+    "cross-env": "^7.0.3",
     "earcut": "^2.2.2",
     "h264-mp4-encoder": "^1.0.12",
     "meshline": "^2.0.3",
@@ -30,7 +32,8 @@
     "@vue/compiler-sfc": "^3.0.0",
     "babel-eslint": "^10.1.0",
     "eslint": "^7.16.0",
-    "eslint-plugin-vue": "^7.0.0-0"
+    "eslint-plugin-vue": "^7.0.0-0",
+    "gh-pages": "^6.3.0"
   },
   "eslintConfig": {
     "root": true,

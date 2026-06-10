@@ -1,4 +1,5 @@
 module.exports = {
+  publicPath: '/Paper_Mind_3D/',
   pwa: {
     name: 'Penzil',
     themeColor: '#1c1c1e',
