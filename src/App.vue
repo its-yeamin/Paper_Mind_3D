@@ -175,7 +175,7 @@ export default {
       cameraControls.dampingFactor = 20;
       cameraControls.draggingDampingFactor = 200;
       cameraControls.mouseButtons.left = CameraControls.ACTION.NONE;
-      cameraControls.mouseButtons.wheel = CameraControls.ACTION.NONE;
+      cameraControls.mouseButtons.wheel = CameraControls.ACTION.ROTATE;
       document.addEventListener("keydown", (event) => {
         if (event.code === "Space") {
           cameraControls.mouseButtons.left = CameraControls.ACTION.TRUCK;
@@ -203,14 +203,11 @@ export default {
       cameraControls.mouseButtons.middle = CameraControls.ACTION.DOLLY;
       cameraControls.mouseButtons.right = CameraControls.ACTION.ZOOM;
       cameraControls.touches.one = CameraControls.ACTION.NONE;
-      cameraControls.touches.two = CameraControls.ACTION.TOUCH_DOLLY_TRUCK;
-      cameraControls.touches.three = CameraControls.ACTION.TOUCH_TRUCK;
+      cameraControls.touches.two = CameraControls.ACTION.TOUCH_ZOOM_ROTATE;
+      cameraControls.touches.three = CameraControls.ACTION.TOUCH_DOLLY_TRUCK;
       cameraControls.maxZoom = 4000;
       cameraControls.minZoom = 1.5;
       cameraControls.enabled = true;
-      renderer.domElement.addEventListener("wheel", this.handleTrackpadWheel, {
-        passive: false,
-      });
 
       this.quaternion = [
         camera.quaternion.x,
@@ -315,20 +312,6 @@ export default {
 
       renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
       renderer.render(scene, camera);
-    },
-    handleTrackpadWheel: function (event) {
-      if (!cameraControls || !cameraControls.enabled) return;
-
-      event.preventDefault();
-
-      if (event.ctrlKey) {
-        const zoomAmount = -event.deltaY * 0.01;
-        cameraControls.zoom(zoomAmount, true);
-      } else {
-        const truckX = -event.deltaX * 0.01;
-        const truckY = event.deltaY * 0.01;
-        cameraControls.truck(truckX, truckY, true);
-      }
     },
     addGridGuide: function () {
       gridGuide = new THREE.Group();

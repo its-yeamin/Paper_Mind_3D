@@ -4,7 +4,6 @@
     @pointermove="handleInput"
     @pointerup="handleInput"
     @pointercancel="handleInput"
-    @pointerleave="handleInput"
     @touchstart="handleInput"
     @touchmove="handleInput"
     @touchend="handleInput"
@@ -514,7 +513,6 @@ export default {
             break;
           case "pointerup":
           case "pointercancel":
-          case "pointerleave":
             if (this.toolEnabled === false) {
               this.$emit("mouse-coordinates", {
                 x: this.mouse.tx,
@@ -523,7 +521,7 @@ export default {
             }
             this.releasePointerCapture(event);
             this.onEnd(event);
-            if (event.type !== "pointerup") {
+            if (event.type === "pointercancel") {
               this.penHover.active = false;
             }
             break;
