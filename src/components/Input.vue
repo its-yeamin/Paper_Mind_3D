@@ -4,6 +4,7 @@
     @pointermove="handleInput"
     @pointerup="handleInput"
     @pointercancel="handleInput"
+    @pointerleave="handleInput"
     @touchstart="handleInput"
     @touchmove="handleInput"
     @touchend="handleInput"
@@ -85,6 +86,18 @@
           </radialGradient>
         </defs></svg
     ></span>
+    <span
+      v-if="penHover.active"
+      class="pen-hover-indicator"
+      :style="{
+        transform:
+          'translate(' +
+          (penHover.x - 10) +
+          'px, ' +
+          (penHover.y - 10) +
+          'px)',
+      }"
+    ></span>
   </div>
 </template>
 
@@ -115,6 +128,12 @@ export default {
       displayTouches: false,
       touches: [],
       movingCanvas: false,
+      lastPenEventAt: 0,
+      penHover: {
+        active: false,
+        x: 0,
+        y: 0,
+      },
     };
   },
   props: {
@@ -142,13 +161,18 @@ export default {
     },
     isPrimaryInputMove: function (event) {
       if (event.pointerType) {
-        return (
-          this.isPenPointer(event) &&
-          (event.buttons === 1 || event.pressure > 0)
-        );
+        return this.isPenPointer(event) && this.mouse.down;
       }
 
       return event.button == 0 || event.touches?.length == 1;
+    },
+    recentlyHandledPen: function () {
+      return Date.now() - this.lastPenEventAt < 900;
+    },
+    updatePenHover: function (event) {
+      this.penHover.active = event.pointerType === "pen";
+      this.penHover.x = event.clientX;
+      this.penHover.y = event.clientY;
     },
     setPointerCapture: function (event) {
       if (event.pointerId === undefined || !event.currentTarget) return;
@@ -431,6 +455,7 @@ export default {
       this.touches = [];
 
       if (!event.pointerType && event.button && event.button != 0) return;
+      if (!this.mouse.down && !this.mouse.multiTouched && !this.mouse.eventCancelled) return;
 
       if (this.mouse.multiTouched || this.mouse.eventCancelled) {
         if (controls.enabled === true && canvas.visible === true) {
@@ -465,12 +490,19 @@ export default {
       this.mouse.distance = 0;
     },
     handleInput: function (event) {
+      if (!event.pointerType && this.recentlyHandledPen()) {
+        event.preventDefault();
+        return;
+      }
+
       if (event.pointerType) {
         if (event.pointerType !== "pen") {
           return;
         }
 
+        this.lastPenEventAt = Date.now();
         this.updateMouseCoordinates(event);
+        this.updatePenHover(event);
 
         switch (event.type) {
           case "pointerdown":
@@ -482,6 +514,7 @@ export default {
             break;
           case "pointerup":
           case "pointercancel":
+          case "pointerleave":
             if (this.toolEnabled === false) {
               this.$emit("mouse-coordinates", {
                 x: this.mouse.tx,
@@ -490,6 +523,9 @@ export default {
             }
             this.releasePointerCapture(event);
             this.onEnd(event);
+            if (event.type !== "pointerup") {
+              this.penHover.active = false;
+            }
             break;
           default:
           //nothing;
@@ -577,5 +613,20 @@ export default {
 #threed {
   width: 100%;
   height: 100%;
+  touch-action: none;
+}
+
+.pen-hover-indicator {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 7;
+  pointer-events: none;
+  border: 2px solid rgba(28, 28, 30, 0.72);
+  border-radius: 50%;
+  background-color: rgba(255, 232, 179, 0.32);
+  box-shadow: 0 0 0 4px rgba(255, 232, 179, 0.16);
 }
 </style>
