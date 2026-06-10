@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/Paper_Mind_3D/precache-manifest.62509199006c1d574c775f808263ad5b.js"
+  "/Paper_Mind_3D/precache-manifest.e8d90e23321da406997e821d83221d6f.js"
 );
 
 workbox.core.setCacheNameDetails({prefix: "penzil"});
