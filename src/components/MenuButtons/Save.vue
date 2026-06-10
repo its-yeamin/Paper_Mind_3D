@@ -3,7 +3,10 @@
 </template>
 
 <script>
-import { serializeProject } from "../projectStorage.js";
+import {
+  exportProjectWithPicker,
+  serializeProject,
+} from "../projectStorage.js";
 
 export default {
   name: "Save",
@@ -12,20 +15,13 @@ export default {
     return {};
   },
   methods: {
-    exportToJson: function () {
+    exportToJson: async function () {
       const project = serializeProject();
-      var dataStr =
-        "data:text/json;charset=utf-8," +
-        encodeURIComponent(JSON.stringify(project));
+      const filename = prompt("Enter a name for your file", project.name || "Untitled");
 
-      var filename = prompt("Enter a name for your file", "sketch");
+      if (filename == null) return;
 
-      if (filename != null) {
-        var el = document.createElement("a");
-        el.setAttribute("href", dataStr);
-        el.setAttribute("download", filename + ".penzil");
-        el.click();
-      }
+      await exportProjectWithPicker(project, filename);
     },
   },
   watch: {},

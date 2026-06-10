@@ -91,9 +91,9 @@
       :style="{
         transform:
           'translate(' +
-          (penHover.x - 3) +
+          (penHover.x - 10) +
           'px, ' +
-          (penHover.y - 3) +
+          (penHover.y - 10) +
           'px)',
       }"
     ></span>
@@ -494,10 +494,6 @@ export default {
         return;
       }
 
-      if (event.touches) {
-        return;
-      }
-
       if (event.pointerType) {
         if (event.pointerType !== "pen") {
           return;
@@ -619,16 +615,16 @@ export default {
 }
 
 .pen-hover-indicator {
-  width: 6px;
-  height: 6px;
+  width: 20px;
+  height: 20px;
   position: absolute;
   top: 0;
   left: 0;
   z-index: 7;
   pointer-events: none;
-  border: 1px solid rgba(28, 28, 30, 0.72);
+  border: 2px solid rgba(28, 28, 30, 0.72);
   border-radius: 50%;
-  background-color: rgba(28, 28, 30, 0.72);
-  box-shadow: 0 0 0 2px rgba(255, 232, 179, 0.28);
+  background-color: rgba(255, 232, 179, 0.32);
+  box-shadow: 0 0 0 4px rgba(255, 232, 179, 0.16);
 }
 </style>

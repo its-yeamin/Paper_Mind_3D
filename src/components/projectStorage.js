@@ -6,11 +6,26 @@ import { createImagePlane, disposeImagePlane } from "./imagePlane.js";
 const DB_NAME = "penzil-projects";
 const DB_VERSION = 1;
 const STORE_NAME = "projects";
-const CURRENT_PROJECT_ID = "current";
+const ACTIVE_PROJECT_KEY = "penzil-active-project-id";
 const PROJECT_VERSION = 3;
+const RECENT_LIMIT = 3;
 
 let autosaveTimer;
 let restoringProject = false;
+let activeProjectId = window.localStorage.getItem(ACTIVE_PROJECT_KEY);
+
+function createProjectId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+
+  return "project-" + Date.now();
+}
+
+function normalizeProjectName(name) {
+  const trimmed = String(name || "").trim();
+  return trimmed || "Untitled";
+}
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -180,6 +195,25 @@ export function serializeProject() {
   };
 }
 
+function createEmptyProject(name) {
+  return {
+    type: "penzil-project",
+    version: PROJECT_VERSION,
+    name: normalizeProjectName(name),
+    savedAt: new Date().toISOString(),
+    strokes: [],
+    images: [],
+  };
+}
+
+async function writeProjectToFileHandle(fileHandle, project) {
+  if (!fileHandle?.createWritable) return;
+
+  const writable = await fileHandle.createWritable();
+  await writable.write(JSON.stringify(project));
+  await writable.close();
+}
+
 export function normalizeProject(data) {
   if (Array.isArray(data)) {
     return {
@@ -193,6 +227,7 @@ export function normalizeProject(data) {
   return {
     type: data?.type || "penzil-project",
     version: data?.version || 1,
+    name: normalizeProjectName(data?.name),
     savedAt: data?.savedAt,
     strokes: Array.isArray(data?.strokes) ? data.strokes : [],
     images: Array.isArray(data?.images) ? data.images : [],
@@ -287,15 +322,29 @@ export function restoreProject(data, replace = true) {
 }
 
 export function saveCurrentProject() {
+  if (!activeProjectId) {
+    activeProjectId = createProjectId();
+    window.localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+  }
+
   const project = serializeProject();
 
-  return runTransaction("readwrite", (store) =>
-    store.put({
-      id: CURRENT_PROJECT_ID,
-      updatedAt: project.savedAt,
-      project,
+  return runTransaction("readwrite", (store) => store.get(activeProjectId))
+    .then((record) => {
+      project.name = normalizeProjectName(record?.name || record?.project?.name);
+      const fileHandle = record?.fileHandle;
+
+      return runTransaction("readwrite", (store) =>
+        store.put({
+          id: activeProjectId,
+          name: project.name,
+          updatedAt: project.savedAt,
+          project,
+          fileHandle,
+        })
+      ).then(() => writeProjectToFileHandle(fileHandle, project));
     })
-  ).catch((error) => {
+    .catch((error) => {
     console.warn("Could not save project locally", error);
   });
 }
@@ -310,16 +359,107 @@ export function scheduleAutoSave() {
 }
 
 export function loadCurrentProject() {
-  return runTransaction("readonly", (store) => store.get(CURRENT_PROJECT_ID))
+  if (!activeProjectId) {
+    return Promise.resolve(false);
+  }
+
+  return runTransaction("readonly", (store) => store.get(activeProjectId))
     .then((record) => {
       if (
         record?.project?.strokes?.length > 0 ||
         record?.project?.images?.length > 0
       ) {
         restoreProject(record.project, true);
+        return true;
       }
+      return false;
     })
     .catch((error) => {
       console.warn("Could not load local project", error);
+      return false;
     });
+}
+
+export function listRecentProjects() {
+  return runTransaction("readonly", (store) => store.getAll())
+    .then((records) =>
+      records
+        .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+        .slice(0, RECENT_LIMIT)
+        .map((record) => ({
+          id: record.id,
+          name: normalizeProjectName(record.name || record.project?.name),
+          updatedAt: record.updatedAt,
+        }))
+    )
+    .catch((error) => {
+      console.warn("Could not load recent projects", error);
+      return [];
+    });
+}
+
+export function createNewProject(name, fileHandle) {
+  const id = createProjectId();
+  const project = createEmptyProject(name);
+
+  restoringProject = true;
+  clearProjectScene();
+  renderer.render(scene, camera);
+  restoringProject = false;
+
+  activeProjectId = id;
+  window.localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+
+  return runTransaction("readwrite", (store) =>
+    store.put({
+      id,
+      name: project.name,
+      updatedAt: project.savedAt,
+      project,
+      fileHandle,
+    })
+  );
+}
+
+export function openRecentProject(id) {
+  return runTransaction("readonly", (store) => store.get(id)).then((record) => {
+    if (!record) return false;
+
+    activeProjectId = id;
+    window.localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+    restoreProject(record.project, true);
+    return true;
+  });
+}
+
+export async function pickProjectFile(name) {
+  if (!window.showSaveFilePicker) return undefined;
+
+  return window.showSaveFilePicker({
+    suggestedName: normalizeProjectName(name) + ".penzil",
+    types: [
+      {
+        description: "Penzil project",
+        accept: { "application/json": [".penzil", ".json"] },
+      },
+    ],
+  });
+}
+
+export async function exportProjectWithPicker(project, name) {
+  const data = JSON.stringify(project);
+
+  if (window.showSaveFilePicker) {
+    const handle = await pickProjectFile(name || project.name || "Untitled");
+    const writable = await handle.createWritable();
+    await writable.write(data);
+    await writable.close();
+    return;
+  }
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(data);
+  const el = document.createElement("a");
+  el.setAttribute("href", dataStr);
+  el.setAttribute("download", normalizeProjectName(name || project.name) + ".penzil");
+  el.click();
 }

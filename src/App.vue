@@ -37,6 +37,12 @@
   <Menu @modal-set="setModal" ref="dotdotdot" />
   <Share @modal-set="setModal" @preview="setPreview" ref="share" />
   <show-tutorial @modal-set="setModal" :show="showTutorialButton" />
+  <project-start
+    v-if="projectStartVisible"
+    :recentProjects="recentProjects"
+    @new-project="startNewProject"
+    @open-project="openProject"
+  />
   <button
     class="grid-guide-toggle"
     v-bind:class="[gridGuideVisible ? 'active' : '']"
@@ -70,8 +76,11 @@ import { controls, canvas } from "./components/Canvas.vue";
 import Modal from "./components/Modal.vue";
 import VideoExportPreview from "./components/VideoExportPreview.vue";
 import ShowTutorial from "./components/ShowTutorial.vue";
+import ProjectStart from "./components/ProjectStart.vue";
 import {
-  loadCurrentProject,
+  createNewProject,
+  listRecentProjects,
+  openRecentProject,
   scheduleAutoSave,
 } from "./components/projectStorage.js";
 
@@ -116,6 +125,7 @@ export default {
     Modal,
     VideoExportPreview,
     ShowTutorial,
+    ProjectStart,
   },
   data() {
     return {
@@ -138,6 +148,8 @@ export default {
       showTutorialButton: true,
       mouse: {},
       gridGuideVisible: false,
+      projectStartVisible: true,
+      recentProjects: [],
     };
   },
   emits: ["modal-set", "selected-canvas-shape"],
@@ -202,7 +214,7 @@ export default {
       });
       cameraControls.mouseButtons.middle = CameraControls.ACTION.DOLLY;
       cameraControls.mouseButtons.right = CameraControls.ACTION.ZOOM;
-      cameraControls.touches.one = CameraControls.ACTION.TOUCH_ROTATE;
+      cameraControls.touches.one = CameraControls.ACTION.NONE;
       cameraControls.touches.two = CameraControls.ACTION.TOUCH_ZOOM_ROTATE;
       cameraControls.touches.three = CameraControls.ACTION.TOUCH_DOLLY_TRUCK;
       cameraControls.maxZoom = 4000;
@@ -290,7 +302,7 @@ export default {
 
       this.$.refs.raycastCanvas.setUp();
       this.$.refs.raycastCanvas.resetTransformation();
-      loadCurrentProject();
+      this.loadProjectStart();
 
       window.addEventListener("resize", this.onWindowResize);
       window.addEventListener("orientationchange", this.onWindowResize);
@@ -312,6 +324,24 @@ export default {
 
       renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
       renderer.render(scene, camera);
+    },
+    loadProjectStart: function () {
+      listRecentProjects().then((projects) => {
+        this.recentProjects = projects;
+        this.projectStartVisible = true;
+      });
+    },
+    startNewProject: function ({ name, fileHandle }) {
+      createNewProject(name, fileHandle).then(() => {
+        this.projectStartVisible = false;
+      });
+    },
+    openProject: function (id) {
+      openRecentProject(id).then((opened) => {
+        if (opened) {
+          this.projectStartVisible = false;
+        }
+      });
     },
     addGridGuide: function () {
       gridGuide = new THREE.Group();
