@@ -109,6 +109,7 @@ export let camera = new THREE.PerspectiveCamera(
 export let scene, drawingScene, cameraControls, vm, drawingprop;
 
 var main, clock, gridGuide;
+var touchPointers = new Map();
 
 export default {
   name: "App",
@@ -242,6 +243,22 @@ export default {
         capture: true,
         passive: false,
       });
+      main.addEventListener("pointerdown", this.handleCanvasPointerDown, {
+        capture: true,
+        passive: false,
+      });
+      main.addEventListener("pointermove", this.handleCanvasPointerMove, {
+        capture: true,
+        passive: false,
+      });
+      main.addEventListener("pointerup", this.handleCanvasPointerEnd, {
+        capture: true,
+        passive: false,
+      });
+      main.addEventListener("pointercancel", this.handleCanvasPointerEnd, {
+        capture: true,
+        passive: false,
+      });
 
       this.quaternion = [
         camera.quaternion.x,
@@ -361,6 +378,47 @@ export default {
         distance: Math.sqrt(dx * dx + dy * dy),
       };
     },
+    getPointerGesture: function () {
+      const points = Array.from(touchPointers.values()).slice(0, 2);
+      const first = points[0];
+      const second = points[1];
+      const x = (first.x + second.x) / 2;
+      const y = (first.y + second.y) / 2;
+      const dx = second.x - first.x;
+      const dy = second.y - first.y;
+
+      return {
+        x,
+        y,
+        distance: Math.sqrt(dx * dx + dy * dy),
+      };
+    },
+    applyCameraGesture: function (gesture) {
+      const deltaX = gesture.x - this.touchGesture.x;
+      const deltaY = gesture.y - this.touchGesture.y;
+      const distanceDelta = gesture.distance - this.touchGesture.distance;
+      const rotateScale = (Math.PI * 2) / Math.max(window.innerWidth, 1);
+      const zoomScale = 0.012;
+
+      cameraControls.rotate(-deltaX * rotateScale, -deltaY * rotateScale, false);
+      cameraControls.zoom(distanceDelta * zoomScale, false);
+
+      this.touchGesture = {
+        active: true,
+        x: gesture.x,
+        y: gesture.y,
+        distance: gesture.distance,
+      };
+      this.quaternion = [
+        camera.quaternion.x,
+        camera.quaternion.y,
+        camera.quaternion.z,
+        camera.quaternion.w,
+      ];
+      this.cameraZoomPercent = Math.round((camera.zoom / 3) * 100);
+      renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+      renderer.render(scene, camera);
+    },
     handleCanvasTouchStart: function (event) {
       if (event.touches.length !== 2 || !cameraControls?.enabled) return;
 
@@ -378,22 +436,7 @@ export default {
       if (!this.touchGesture.active || event.touches.length !== 2) return;
 
       const gesture = this.getTwoFingerGesture(event);
-      const deltaX = gesture.x - this.touchGesture.x;
-      const deltaY = gesture.y - this.touchGesture.y;
-      const distanceDelta = gesture.distance - this.touchGesture.distance;
-      const rotateScale = (Math.PI * 2) / Math.max(window.innerWidth, 1);
-      const zoomScale = 0.012;
-
-      cameraControls.rotate(-deltaX * rotateScale, -deltaY * rotateScale, false);
-      cameraControls.zoom(distanceDelta * zoomScale, false);
-
-      this.touchGesture = {
-        active: true,
-        x: gesture.x,
-        y: gesture.y,
-        distance: gesture.distance,
-      };
-      this.cameraZoomPercent = Math.round((camera.zoom / 3) * 100);
+      this.applyCameraGesture(gesture);
       event.preventDefault();
       event.stopImmediatePropagation();
     },
@@ -403,6 +446,67 @@ export default {
       this.touchGesture.active = false;
       event.preventDefault();
       event.stopImmediatePropagation();
+    },
+    handleCanvasPointerDown: function (event) {
+      if (event.pointerType !== "touch" || !cameraControls?.enabled) return;
+
+      touchPointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      if (touchPointers.size < 2) return;
+
+      const gesture = this.getPointerGesture();
+      this.touchGesture = {
+        active: true,
+        x: gesture.x,
+        y: gesture.y,
+        distance: gesture.distance,
+      };
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    },
+    handleCanvasPointerMove: function (event) {
+      if (event.pointerType !== "touch" || !touchPointers.has(event.pointerId)) {
+        return;
+      }
+
+      touchPointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      if (touchPointers.size < 2) return;
+
+      const gesture = this.getPointerGesture();
+      if (this.touchGesture.active) {
+        this.applyCameraGesture(gesture);
+      } else {
+        this.touchGesture = {
+          active: true,
+          x: gesture.x,
+          y: gesture.y,
+          distance: gesture.distance,
+        };
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    },
+    handleCanvasPointerEnd: function (event) {
+      if (event.pointerType !== "touch") return;
+
+      const wasCameraGesture = this.touchGesture.active && touchPointers.size >= 2;
+      touchPointers.delete(event.pointerId);
+
+      if (touchPointers.size < 2) {
+        this.touchGesture.active = false;
+      }
+
+      if (wasCameraGesture) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
     },
     loadProjectStart: function () {
       listRecentProjects().then((projects) => {
