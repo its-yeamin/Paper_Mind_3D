@@ -29,10 +29,12 @@ export default {
     undo: function () {
       undoManager.undo();
       this.updateUi();
+      window.dispatchEvent(new CustomEvent("penzil-project-change"));
     },
     redo: function () {
       undoManager.redo();
       this.updateUi();
+      window.dispatchEvent(new CustomEvent("penzil-project-change"));
     },
     setTool: function (val) {
       this.$emit("selected-tool", val);

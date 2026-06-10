@@ -4,6 +4,8 @@
   <viewport-cube
     :quaternion="quaternion"
     :cameraResetDisabled="cameraResetDisabled"
+    :cameraZoomPercent="cameraZoomPercent"
+    @camera-zoom="setCameraZoom"
   />
   <tool-selector @selected-tool="setSelectedTool" :selectedTool="tool" />
   <line-settings @stroke="setStroke" @fill="setFill" :selectedTool="tool" />
@@ -35,6 +37,13 @@
   <Menu @modal-set="setModal" ref="dotdotdot" />
   <Share @modal-set="setModal" @preview="setPreview" ref="share" />
   <show-tutorial @modal-set="setModal" :show="showTutorialButton" />
+  <button
+    class="grid-guide-toggle"
+    v-bind:class="[gridGuideVisible ? 'active' : '']"
+    @click="toggleGridGuide"
+  >
+    3D Grid
+  </button>
   <!-- <div>
     <a id="ar" rel="ar"><img src="@/assets/icons/AR.png" /></a>
   </div> -->
@@ -61,6 +70,10 @@ import { controls, canvas } from "./components/Canvas.vue";
 import Modal from "./components/Modal.vue";
 import VideoExportPreview from "./components/VideoExportPreview.vue";
 import ShowTutorial from "./components/ShowTutorial.vue";
+import {
+  loadCurrentProject,
+  scheduleAutoSave,
+} from "./components/projectStorage.js";
 
 export let renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -86,7 +99,7 @@ export let camera = new THREE.PerspectiveCamera(
 
 export let scene, drawingScene, cameraControls, vm, drawingprop;
 
-var main, clock;
+var main, clock, gridGuide;
 
 export default {
   name: "App",
@@ -116,6 +129,7 @@ export default {
       mirror: false,
       quaternion: undefined,
       cameraResetDisabled: false,
+      cameraZoomPercent: 100,
       selected: undefined,
       transformToolbar: { top: 0, left: 0, location: "above", display: false },
       canvasTransformEnabled: true,
@@ -123,6 +137,7 @@ export default {
       previewing: false,
       showTutorialButton: true,
       mouse: {},
+      gridGuideVisible: false,
     };
   },
   emits: ["modal-set", "selected-canvas-shape"],
@@ -147,6 +162,7 @@ export default {
 
       const grid = new InfiniteGridHelper(1, 10, new THREE.Color(0x0000ff), 40);
       scene.add(grid);
+      this.addGridGuide();
 
       camera.layers.enable(0); // enabled by default
       camera.layers.enable(1);
@@ -207,6 +223,7 @@ export default {
           camera.quaternion.z,
           camera.quaternion.w,
         ];
+        this.cameraZoomPercent = Math.round((camera.zoom / 3) * 100);
 
         let target = new THREE.Vector3();
         target = cameraControls.getTarget(target);
@@ -273,9 +290,11 @@ export default {
 
       this.$.refs.raycastCanvas.setUp();
       this.$.refs.raycastCanvas.resetTransformation();
+      loadCurrentProject();
 
       window.addEventListener("resize", this.onWindowResize);
       window.addEventListener("orientationchange", this.onWindowResize);
+      window.addEventListener("penzil-project-change", scheduleAutoSave);
       this.onWindowResize();
 
       renderer.render(scene, camera);
@@ -292,6 +311,77 @@ export default {
       renderer.setSize(window.innerWidth, window.innerHeight);
 
       renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+      renderer.render(scene, camera);
+    },
+    addGridGuide: function () {
+      gridGuide = new THREE.Group();
+      gridGuide.name = "gridGuide";
+
+      const divisions = 20;
+      const step = 1;
+      const halfSize = (divisions * step) / 2;
+      const pointsPerAxis = divisions + 1;
+      const positions = [];
+      const indices = [];
+      const minorMaterial = new THREE.LineBasicMaterial({
+        color: 0x5677ff,
+        transparent: true,
+        opacity: 0.16,
+        depthWrite: false,
+      });
+
+      const pointIndex = function (x, y, z) {
+        return x + y * pointsPerAxis + z * pointsPerAxis * pointsPerAxis;
+      };
+
+      for (let z = 0; z < pointsPerAxis; z++) {
+        for (let y = 0; y < pointsPerAxis; y++) {
+          for (let x = 0; x < pointsPerAxis; x++) {
+            positions.push(
+              x * step - halfSize,
+              y * step - halfSize,
+              z * step - halfSize
+            );
+          }
+        }
+      }
+
+      for (let z = 0; z < pointsPerAxis; z++) {
+        for (let y = 0; y < pointsPerAxis; y++) {
+          for (let x = 0; x < pointsPerAxis; x++) {
+            const index = pointIndex(x, y, z);
+
+            if (x + 1 < pointsPerAxis) {
+              indices.push(index, pointIndex(x + 1, y, z));
+            }
+            if (y + 1 < pointsPerAxis) {
+              indices.push(index, pointIndex(x, y + 1, z));
+            }
+            if (z + 1 < pointsPerAxis) {
+              indices.push(index, pointIndex(x, y, z + 1));
+            }
+          }
+        }
+      }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(positions, 3)
+      );
+      geometry.setIndex(indices);
+
+      gridGuide.add(new THREE.LineSegments(geometry, minorMaterial));
+      gridGuide.visible = this.gridGuideVisible;
+      scene.add(gridGuide);
+    },
+    toggleGridGuide: function () {
+      this.gridGuideVisible = !this.gridGuideVisible;
+
+      if (gridGuide) {
+        gridGuide.visible = this.gridGuideVisible;
+      }
+
       renderer.render(scene, camera);
     },
     animate: function () {
@@ -369,6 +459,11 @@ export default {
       } else {
         cameraControls.enabled = false;
       }
+    },
+    setCameraZoom: function (percent) {
+      let nextZoom = THREE.MathUtils.clamp((percent / 100) * 3, 1.5, 4000);
+      this.cameraZoomPercent = Math.round((nextZoom / 3) * 100);
+      cameraControls.zoomTo(nextZoom, true);
     },
     setSelectedObject: function (val) {
       this.selected = val;
@@ -496,6 +591,25 @@ a:hover {
   color: #ff8400;
 }
 
+.grid-guide-toggle {
+  position: absolute;
+  z-index: 2;
+  right: 12px;
+  top: 200px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background-color: #fff;
+  color: #1c1c1e;
+  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
+  font-size: 0.8em;
+  padding: 0 12px;
+}
+
+.grid-guide-toggle.active {
+  background-color: #ffe8b3;
+}
+
 @media (min-width: 320px) and (max-width: 480px) {
   #viewport {
     display: none;
@@ -507,6 +621,11 @@ a:hover {
 
   .soapbar {
     display: none;
+  }
+
+  .grid-guide-toggle {
+    top: 12px;
+    right: 12px;
   }
 
   .canvasSettings {

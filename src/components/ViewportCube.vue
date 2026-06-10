@@ -17,6 +17,41 @@
       v-bind:class="[cameraResetDisabled ? 'disabled ' : '']"
       ><img src="@/assets/icons/reset.svg" alt="Reset camera position and zoom"
     /></span>
+    <div
+      class="camera-zoom-control"
+      @mousedown.stop
+      @mousemove.stop
+      @mouseup.stop
+      @touchstart.stop
+      @touchmove.stop
+      @touchend.stop
+    >
+      <button
+        class="camera-zoom-button"
+        type="button"
+        aria-label="Zoom out"
+        @click.stop="stepZoom(-25)"
+      >
+        -
+      </button>
+      <input
+        class="camera-zoom-input"
+        aria-label="Camera zoom percent"
+        inputmode="numeric"
+        v-model="zoomInput"
+        @change="commitZoomInput()"
+        @keydown.enter="commitZoomInput()"
+        @focus="$event.target.select()"
+      />
+      <button
+        class="camera-zoom-button"
+        type="button"
+        aria-label="Zoom in"
+        @click.stop="stepZoom(25)"
+      >
+        +
+      </button>
+    </div>
   </div>
 </template>
 
@@ -32,7 +67,9 @@ export default {
   props: {
     quaternion: Array,
     cameraResetDisabled: Boolean,
+    cameraZoomPercent: Number,
   },
+  emits: ["camera-zoom"],
   data() {
     return {
       mouse: {
@@ -45,9 +82,34 @@ export default {
         lastDragPosition: new THREE.Vector2(),
         force: 0,
       },
+      zoomInput: "100%",
     };
   },
   methods: {
+    formatZoomPercent: function (value) {
+      return Math.round(value) + "%";
+    },
+    clampZoomPercent: function (value) {
+      return THREE.MathUtils.clamp(value, 50, 1000);
+    },
+    setZoomPercent: function (value) {
+      let percent = this.clampZoomPercent(value);
+      this.zoomInput = this.formatZoomPercent(percent);
+      this.$emit("camera-zoom", percent);
+    },
+    stepZoom: function (step) {
+      this.setZoomPercent(this.cameraZoomPercent + step);
+    },
+    commitZoomInput: function () {
+      let value = parseFloat(String(this.zoomInput).replace("%", ""));
+
+      if (Number.isNaN(value)) {
+        this.zoomInput = this.formatZoomPercent(this.cameraZoomPercent);
+        return;
+      }
+
+      this.setZoomPercent(value);
+    },
     updateMouseCoordinates: function (event) {
       if (event.touches) {
         this.mouse.tx =
@@ -268,6 +330,7 @@ export default {
       cameraControls.enabled = false;
       cameraControls.setLookAt(0, 0, 10, 0, 0, 0, true);
       cameraControls.zoomTo(3, true);
+      this.zoomInput = "100%";
       setTimeout(() => {
         cameraControls.dampingFactor = 20;
         cameraControls.enabled = true;
@@ -303,6 +366,9 @@ export default {
     },
   },
   watch: {
+    cameraZoomPercent: function (val) {
+      this.zoomInput = this.formatZoomPercent(val);
+    },
     quaternion: function (val) {
       viewPortScene.setRotationFromQuaternion(
         new THREE.Quaternion(val[0], val[1], val[2], val[3]).invert()
@@ -313,6 +379,7 @@ export default {
   mounted() {
     this.init();
     this.render();
+    this.zoomInput = this.formatZoomPercent(this.cameraZoomPercent);
   },
 };
 </script>
@@ -352,5 +419,46 @@ export default {
   text-align: center;
   z-index: 4;
   filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
+}
+
+.camera-zoom-control {
+  position: absolute;
+  top: 152px;
+  right: 0;
+  width: 132px;
+  height: 36px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 1);
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  z-index: 4;
+  overflow: hidden;
+  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
+}
+
+.camera-zoom-button {
+  height: 36px;
+  border: 0;
+  background-color: transparent;
+  color: #1c1c1e;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+}
+
+.camera-zoom-input {
+  min-width: 0;
+  height: 36px;
+  border: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  color: #1c1c1e;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 4px;
+  outline: none;
 }
 </style>

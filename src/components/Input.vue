@@ -1,5 +1,9 @@
 <template>
   <div
+    @pointerdown="handleInput"
+    @pointermove="handleInput"
+    @pointerup="handleInput"
+    @pointercancel="handleInput"
     @touchstart="handleInput"
     @touchmove="handleInput"
     @touchend="handleInput"
@@ -91,7 +95,7 @@ import { select } from "./select.js";
 
 import * as THREE from "three";
 import { canvas, controls } from "./Canvas.vue";
-import { renderer, scene, camera } from "../App.vue";
+import { renderer, scene, camera, vm } from "../App.vue";
 
 export default {
   name: "Input",
@@ -122,8 +126,89 @@ export default {
   },
   emits: ["mouse-coordinates"],
   methods: {
+    isPenPointer: function (event) {
+      return event.pointerType === "pen" && event.isPrimary !== false;
+    },
+    isPrimaryInputStart: function (event) {
+      if (event.pointerType) {
+        return this.isPenPointer(event) && event.button === 0;
+      }
+
+      return (
+        event.button == 0 ||
+        event.touches?.length == 1 ||
+        event.touches?.force > 0
+      );
+    },
+    isPrimaryInputMove: function (event) {
+      if (event.pointerType) {
+        return this.isPenPointer(event) && event.buttons === 1;
+      }
+
+      return event.button == 0 || event.touches?.length == 1;
+    },
+    setPointerCapture: function (event) {
+      if (event.pointerId === undefined || !event.currentTarget) return;
+
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch (error) {
+        return;
+      }
+    },
+    releasePointerCapture: function (event) {
+      if (event.pointerId === undefined || !event.currentTarget) return;
+
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch (error) {
+        return;
+      }
+    },
+    isCanvasAtSavedTransform: function (canvasData) {
+      if (!canvasData) return false;
+
+      let position = new THREE.Vector3();
+      let quaternion = new THREE.Quaternion();
+      let scale = new THREE.Vector3();
+      canvas.getWorldPosition(position);
+      canvas.getWorldQuaternion(quaternion);
+      canvas.getWorldScale(scale);
+
+      let savedPosition = new THREE.Vector3(
+        canvasData.position.x,
+        canvasData.position.y,
+        canvasData.position.z
+      );
+      let savedQuaternion = new THREE.Quaternion(
+        canvasData.quaternion.x ?? canvasData.quaternion._x,
+        canvasData.quaternion.y ?? canvasData.quaternion._y,
+        canvasData.quaternion.z ?? canvasData.quaternion._z,
+        canvasData.quaternion.w ?? canvasData.quaternion._w
+      );
+      let savedScale = new THREE.Vector3(
+        canvasData.scale.x,
+        canvasData.scale.y,
+        canvasData.scale.z
+      );
+
+      return (
+        position.distanceTo(savedPosition) < 0.01 &&
+        Math.abs(quaternion.dot(savedQuaternion)) > 0.9999 &&
+        scale.distanceTo(savedScale) < 0.01
+      );
+    },
     updateMouseCoordinates: function (event) {
-      if (event.touches) {
+      if (event.pointerType === "pen") {
+        this.mouse.tx = (event.clientX / window.innerWidth) * 2 - 1;
+        this.mouse.ty = -(event.clientY / window.innerHeight) * 2 + 1;
+        this.mouse.cx = event.clientX;
+        this.mouse.cy = event.clientY;
+        this.mouse.force =
+          event.pressure !== undefined && event.pressure > 0
+            ? event.pressure
+            : 0.5;
+      } else if (event.touches) {
         this.mouse.tx =
           (event.changedTouches[0].pageX / window.innerWidth) * 2 - 1;
         this.mouse.ty =
@@ -149,7 +234,10 @@ export default {
       }
     },
     onStart: function (event) {
-      if ((event.button && event.button != 0) || this.toolEnabled === false) {
+      if (
+        (!event.pointerType && event.button && event.button != 0) ||
+        this.toolEnabled === false
+      ) {
         return;
       }
 
@@ -161,11 +249,7 @@ export default {
         }
       }
 
-      if (
-        event.button == 0 ||
-        event.touches.length == 1 ||
-        event.touches.force > 0
-      ) {
+      if (this.isPrimaryInputStart(event)) {
         this.mouse.down = true;
         this.mouse.eventCancelled = false;
         this.mouse.multiTouched = false;
@@ -192,6 +276,49 @@ export default {
               this.movingCanvas = true;
               return;
             } else {
+              raycaster.layers.set(1);
+              raycaster.params.Line.threshold = 0.05;
+              let strokeIntersection = raycaster
+                .intersectObjects(scene.children, true)
+                .find((intersection) => intersection.object.userData.canvas);
+
+              if (strokeIntersection) {
+                if (strokeIntersection.object.userData.kind === "imagePlane") {
+                  vm.$refs.raycastCanvas.selectImage(strokeIntersection.object);
+
+                  if (
+                    this.isCanvasAtSavedTransform(
+                      strokeIntersection.object.userData.canvas
+                    )
+                  ) {
+                    raycaster.layers.set(0);
+                  } else {
+                    let canvasData = strokeIntersection.object.userData.canvas;
+                    vm.$refs.raycastCanvas.setShapeAndMatrix(
+                      canvasData.shape,
+                      canvasData.position,
+                      canvasData.quaternion,
+                      canvasData.scale
+                    );
+                    this.mouse.down = false;
+                    this.mouse.eventCancelled = true;
+                    return;
+                  }
+                } else {
+                  let canvasData = strokeIntersection.object.userData.canvas;
+                  vm.$refs.raycastCanvas.setShapeAndMatrix(
+                    canvasData.shape,
+                    canvasData.position,
+                    canvasData.quaternion,
+                    canvasData.scale
+                  );
+                  this.mouse.down = false;
+                  this.mouse.eventCancelled = true;
+                  return;
+                }
+              }
+
+              raycaster.layers.set(0);
               if (
                 controls.enabled === true &&
                 raycaster.intersectObjects([canvas])[0] !== undefined
@@ -251,7 +378,10 @@ export default {
       }
     },
     onMove: function (event) {
-      if ((event.button && event.button != 0) || this.toolEnabled === false)
+      if (
+        (!event.pointerType && event.button && event.button != 0) ||
+        this.toolEnabled === false
+      )
         return;
 
       this.touches = [];
@@ -262,7 +392,7 @@ export default {
       }
 
       if (this.mouse.down) {
-        if (event.button == 0 || event.touches.length == 1) {
+        if (this.isPrimaryInputMove(event)) {
           switch (this.selectedTool) {
             case "draw":
               if (this.movingCanvas === false) {
@@ -297,7 +427,7 @@ export default {
       if (this.toolEnabled === false) return;
       this.touches = [];
 
-      if (event.button && event.button != 0) return;
+      if (!event.pointerType && event.button && event.button != 0) return;
 
       if (this.mouse.multiTouched || this.mouse.eventCancelled) {
         if (controls.enabled === true && canvas.visible === true) {
@@ -332,6 +462,38 @@ export default {
       this.mouse.distance = 0;
     },
     handleInput: function (event) {
+      if (event.pointerType) {
+        if (event.pointerType !== "pen") return;
+
+        this.updateMouseCoordinates(event);
+
+        switch (event.type) {
+          case "pointerdown":
+            this.setPointerCapture(event);
+            this.onStart(event);
+            break;
+          case "pointermove":
+            this.onMove(event);
+            break;
+          case "pointerup":
+          case "pointercancel":
+            if (this.toolEnabled === false) {
+              this.$emit("mouse-coordinates", {
+                x: this.mouse.tx,
+                y: this.mouse.ty,
+              });
+            }
+            this.releasePointerCapture(event);
+            this.onEnd(event);
+            break;
+          default:
+          //nothing;
+        }
+
+        event.preventDefault();
+        return;
+      }
+
       this.updateMouseCoordinates(event);
 
       switch (event.type) {

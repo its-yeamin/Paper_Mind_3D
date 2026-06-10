@@ -41,15 +41,18 @@ let draw = {
                 sizeAttenuation: 1,
                 color: this.stroke.show_stroke ? this.stroke.color : 0xFFFFFF,
                 side: THREE.DoubleSide,
+                depthTest: false,
+                depthWrite: false,
                 fog: true,
                 wireframe: false,
                 alphaTest: 0.9,
                 blending: THREE.NormalBlending,
-                transparent: false,
+                transparent: true,
                 repeat: new THREE.Vector2(1, 1),
                 opacity: !this.stroke.show_stroke ? 1 : 1,
             });
             this.mesh = new THREE.Mesh(this.line, this.material);
+            this.mesh.renderOrder = 2;
             this.uuid = this.mesh.uuid;
 
             this.mesh.raycast = MeshLineRaycast;
@@ -88,6 +91,7 @@ let draw = {
                 polygonOffset: this.stroke.show_stroke ? true : false,
                 polygonOffsetFactor: this.stroke.lineWidth * 1000,
                 depthTest: true,
+                depthWrite: false,
                 polygonOffsetUnits: -1,
                 transparent: this.fill.show_fill ? true : false,
                 opacity: this.fill.show_fill ? 0.05 : 0,
@@ -95,6 +99,7 @@ let draw = {
                 // map: texture
             });
             this.fillMesh = new THREE.Mesh(this.fillGeometry, this.fillMaterial);
+            this.fillMesh.renderOrder = 2;
             this.fillMesh.layers.set(1);
         }
         start(x, y, z, force, unproject, mirrorOn) {
@@ -120,7 +125,6 @@ let draw = {
                 default:
                 //it's false, do nothing
             }
-            console.log(x, y, z, unproject, force)
             // var v3 = new THREE.Vector3(x, y, z);
             // if (unproject) {
             //     v3.unproject(camera);
@@ -231,6 +235,7 @@ let draw = {
             });
 
             undoRedoComponent.$.ctx.updateUi();
+            window.dispatchEvent(new CustomEvent("penzil-project-change"));
 
         }
         addVertex(x, y, z, force, unproject) {
@@ -463,7 +468,7 @@ let draw = {
     onCancel: function () {
         this.l ? this.l.cancel() : null;
     },
-    fromVertices(vertices, stroke, fill, mirrorOn, uuid, position, quaternion, scale, matrix, render) {
+    fromVertices(vertices, stroke, fill, mirrorOn, uuid, position, quaternion, scale, matrix, render, canvasData) {
 
         let verticesArray = [];
         vertices.forEach((v3) => {
@@ -485,6 +490,9 @@ let draw = {
         this.l.setUvs();
 
         this.l.mesh.userData.stroke.force = stroke.force;
+        if (canvasData) {
+            this.l.mesh.userData.canvas = canvasData;
+        }
         this.l.setGeometry();
 
         if (uuid) { this.l.mesh.uuid = uuid; }

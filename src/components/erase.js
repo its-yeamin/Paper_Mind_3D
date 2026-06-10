@@ -4,6 +4,7 @@ import { mirror } from "./mirror.js"
 import { MeshLineMaterial } from "meshline";
 import { draw } from "./draw.js";
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue"
+import { disposeImagePlane } from "./imagePlane.js";
 
 let erase = {
     e: undefined,
@@ -232,6 +233,13 @@ let erase = {
             object.uuid
         ) == undefined) { return }
 
+        if (object.userData.kind === "imagePlane") {
+            disposeImagePlane(object);
+            renderer.render(scene, camera);
+            window.dispatchEvent(new CustomEvent("penzil-project-change"));
+            return
+        }
+
         let uuid = object.uuid;
         let vertices = object.geometry.points;
         let stroke = object.userData.stroke;
@@ -243,6 +251,7 @@ let erase = {
         object.getWorldQuaternion(quaternion);
         let scale = new THREE.Vector3();
         object.getWorldScale(scale);
+        let canvasData = object.userData.canvas;
 
         let matrix = object.matrix;
 
@@ -266,7 +275,9 @@ let erase = {
                     position,
                     quaternion,
                     scale,
-                    matrix
+                    matrix,
+                    false,
+                    canvasData
                 );
                 renderer.render(scene, camera);
             },
@@ -280,6 +291,7 @@ let erase = {
         });
 
         undoRedoComponent.$.ctx.updateUi();
+        window.dispatchEvent(new CustomEvent("penzil-project-change"));
 
     },
     onStart: function (cx, cy) {

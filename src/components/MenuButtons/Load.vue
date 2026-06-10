@@ -3,15 +3,18 @@
 </template>
 
 <script>
-import { draw } from "../draw.js";
-import { scene, renderer, camera } from "../../App.vue";
+import {
+  restoreProject,
+  saveCurrentProject,
+  normalizeProject,
+} from "../projectStorage.js";
 
 export default {
-  name: "Import",
+  name: "Load",
   props: {},
   data() {
     return {
-      text: "Load",
+      text: "Import Backup",
     };
   },
   methods: {
@@ -20,34 +23,20 @@ export default {
       var input = document.createElement("input");
       input.style.display = "none";
       input.type = "file";
+      input.accept = ".penzil,.json,application/json";
       document.body.appendChild(input);
       input.onchange = (event) => {
         file = event.target.files[0];
         function onReaderLoad(event) {
-          var json = JSON.parse(event.target.result);
-          let i = 0;
-          function drawLine(l) {
-            draw.fromVertices(
-              new Float32Array(l.vertices),
-              l.stroke,
-              l.fill,
-              l.mirrorOn,
-              null, //uuid, not necessary to restore in import
-              l.position,
-              l.quaternion,
-              l.scale,
-              l.matrix
-            );
-            if (i < json.length - 1) {
-              i++;
-              drawLine(json[i]);
-            } else {
-              renderer.render(scene, camera);
-            }
-          }
-          drawLine(json[i]);
+          var project = normalizeProject(JSON.parse(event.target.result));
+          restoreProject(project, true);
+          saveCurrentProject();
         }
-        if (file.type == "application/json") {
+        if (
+          file.type == "application/json" ||
+          file.name.endsWith(".json") ||
+          file.name.endsWith(".penzil")
+        ) {
           var reader = new FileReader();
           reader.onload = onReaderLoad;
           reader.readAsText(file);

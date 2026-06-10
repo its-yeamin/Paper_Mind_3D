@@ -147,6 +147,81 @@
         alt="Reset canvas position, rotation and scale"
       />
     </span>
+    <span
+      class="canvas-button image-tools"
+      v-if="!shapeSelectionVisibility"
+      v-bind:class="[!visible ? 'disabled' : '']"
+    >
+      <button class="image-import-button" type="button" @click="importImage()">
+        Image
+      </button>
+      <span class="image-scale-row">
+        <button
+          type="button"
+          @click="stepSelectedImageScale(-10)"
+          v-bind:disabled="!selectedImageId"
+        >
+          -
+        </button>
+        <input
+          v-model="selectedImageScaleInput"
+          inputmode="numeric"
+          v-bind:disabled="!selectedImageId"
+          @change="commitSelectedImageScale()"
+          @keydown.enter="commitSelectedImageScale()"
+          @focus="$event.target.select()"
+        />
+        <button
+          type="button"
+          @click="stepSelectedImageScale(10)"
+          v-bind:disabled="!selectedImageId"
+        >
+          +
+        </button>
+      </span>
+    </span>
+    <span
+      class="canvas-button rotation-readout"
+      v-if="!shapeSelectionVisibility"
+      v-bind:class="[!visible ? 'disabled' : '']"
+    >
+      <label>
+        X
+        <button type="button" @click="stepRotation('x', -5)">-</button>
+        <input
+          v-model="rotationInput.x"
+          inputmode="numeric"
+          @change="commitRotationInput('x')"
+          @keydown.enter="commitRotationInput('x')"
+          @focus="$event.target.select()"
+        />
+        <button type="button" @click="stepRotation('x', 5)">+</button>
+      </label>
+      <label>
+        Y
+        <button type="button" @click="stepRotation('y', -5)">-</button>
+        <input
+          v-model="rotationInput.y"
+          inputmode="numeric"
+          @change="commitRotationInput('y')"
+          @keydown.enter="commitRotationInput('y')"
+          @focus="$event.target.select()"
+        />
+        <button type="button" @click="stepRotation('y', 5)">+</button>
+      </label>
+      <label>
+        Z
+        <button type="button" @click="stepRotation('z', -5)">-</button>
+        <input
+          v-model="rotationInput.z"
+          inputmode="numeric"
+          @change="commitRotationInput('z')"
+          @keydown.enter="commitRotationInput('z')"
+          @focus="$event.target.select()"
+        />
+        <button type="button" @click="stepRotation('z', 5)">+</button>
+      </label>
+    </span>
     <!-- <span
       v-bind:class="[!visible ? 'disabled' : '']"
       class="canvas-button"
@@ -234,9 +309,13 @@
 
 <script>
 import * as THREE from "three";
+import { Earcut } from "three/src/extras/Earcut.js";
 import { TransformControls } from "./transformControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { scene, renderer, camera, vm } from "../App.vue";
+import { createImagePlane } from "./imagePlane.js";
+import { draw } from "./draw.js";
+import { undoManager, undoRedoComponent } from "./UndoRedo.vue";
 
 export let canvas, controls, currentShape;
 let raycaster;
@@ -256,6 +335,7 @@ export default {
         polygonOffset: true,
         polygonOffsetFactor: 2.5,
         polygonOffsetUnits: -1,
+        depthWrite: false,
         emissive: new THREE.Color("rgb(255,255,255)"),
         emissiveIntensity: 0.3,
         // wireframe: true,
@@ -271,6 +351,11 @@ export default {
       snap: false,
       shapeSelectionVisibility: false,
       restoringTransformation: false,
+      rotationDegrees: { x: 0, y: 0, z: 0 },
+      rotationInput: { x: "0", y: "0", z: "0" },
+      selectedImage: undefined,
+      selectedImageId: undefined,
+      selectedImageScaleInput: "100%",
     };
   },
   props: {
@@ -285,6 +370,7 @@ export default {
       const material = this.material;
       canvas = new THREE.Mesh(geometry, material);
       scene.add(canvas);
+      this.updateRotationReadout();
 
       controls = new TransformControls(camera, renderer.domElement);
       controls.mode = "combined";
@@ -293,6 +379,8 @@ export default {
         //this is not very elegant but…
         if (vm != undefined) {
           vm.$refs.raycastCanvas.transformationResetDisabled = false;
+          vm.$refs.raycastCanvas.updateRotationReadout();
+          vm.$refs.raycastCanvas.updateImagePresentation();
         }
 
         if (canvasMirror !== undefined) {
@@ -347,6 +435,587 @@ export default {
       controls.attach(canvas);
       renderer.render(scene, camera);
     },
+    transformsMatchCanvas(canvasData) {
+      if (!canvasData || !canvas) return false;
+
+      let position = new THREE.Vector3();
+      let quaternion = new THREE.Quaternion();
+      let scale = new THREE.Vector3();
+      canvas.getWorldPosition(position);
+      canvas.getWorldQuaternion(quaternion);
+      canvas.getWorldScale(scale);
+
+      let savedPosition = new THREE.Vector3(
+        canvasData.position.x,
+        canvasData.position.y,
+        canvasData.position.z
+      );
+      let savedQuaternion = new THREE.Quaternion(
+        canvasData.quaternion.x ?? canvasData.quaternion._x,
+        canvasData.quaternion.y ?? canvasData.quaternion._y,
+        canvasData.quaternion.z ?? canvasData.quaternion._z,
+        canvasData.quaternion.w ?? canvasData.quaternion._w
+      );
+      let savedScale = new THREE.Vector3(
+        canvasData.scale.x,
+        canvasData.scale.y,
+        canvasData.scale.z
+      );
+
+      return (
+        position.distanceTo(savedPosition) < 0.01 &&
+        Math.abs(quaternion.dot(savedQuaternion)) > 0.9999 &&
+        scale.distanceTo(savedScale) < 0.01
+      );
+    },
+    updateImagePresentation() {
+      if (!scene || !canvas) return;
+
+      scene.children.forEach((object) => {
+        if (object.userData.kind !== "imagePlane") return;
+
+        object.material.opacity = 1;
+        object.material.depthTest = true;
+        object.material.depthWrite = false;
+        object.renderOrder = 0;
+        object.material.polygonOffsetFactor = -4;
+        object.material.polygonOffsetUnits = -4;
+        object.material.needsUpdate = true;
+      });
+    },
+    updateRotationReadout() {
+      if (!canvas) return;
+
+      let euler = new THREE.Euler().setFromQuaternion(
+        canvas.quaternion,
+        "XYZ"
+      );
+
+      this.rotationDegrees = {
+        x: Math.round(THREE.MathUtils.radToDeg(euler.x)),
+        y: Math.round(THREE.MathUtils.radToDeg(euler.y)),
+        z: Math.round(THREE.MathUtils.radToDeg(euler.z)),
+      };
+      this.rotationInput = {
+        x: String(this.rotationDegrees.x),
+        y: String(this.rotationDegrees.y),
+        z: String(this.rotationDegrees.z),
+      };
+    },
+    commitRotationInput(axis) {
+      let value = parseFloat(this.rotationInput[axis]);
+
+      if (Number.isNaN(value)) {
+        this.updateRotationReadout();
+        return;
+      }
+
+      this.rotationDegrees[axis] = Math.round(value);
+
+      let euler = new THREE.Euler(
+        THREE.MathUtils.degToRad(this.rotationDegrees.x),
+        THREE.MathUtils.degToRad(this.rotationDegrees.y),
+        THREE.MathUtils.degToRad(this.rotationDegrees.z),
+        "XYZ"
+      );
+
+      canvas.quaternion.setFromEuler(euler);
+      canvas.updateMatrixWorld(true);
+      this.transformationResetDisabled = false;
+      this.updateRotationReadout();
+      renderer.render(scene, camera);
+    },
+    stepRotation(axis, amount) {
+      this.rotationDegrees[axis] += amount;
+      this.rotationInput[axis] = String(this.rotationDegrees[axis]);
+      this.commitRotationInput(axis);
+    },
+    getCurrentCanvasData() {
+      let position = new THREE.Vector3();
+      canvas.getWorldPosition(position);
+      let quaternion = new THREE.Quaternion();
+      canvas.getWorldQuaternion(quaternion);
+      let scale = new THREE.Vector3();
+      canvas.getWorldScale(scale);
+
+      return {
+        shape: currentShape,
+        position,
+        quaternion,
+        scale,
+      };
+    },
+    importImage() {
+      let input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.style.display = "none";
+      document.body.appendChild(input);
+
+      input.onchange = (event) => {
+        let file = event.target.files[0];
+        if (!file) return;
+
+        let reader = new FileReader();
+        reader.onload = (readerEvent) => {
+          let image = new Image();
+          image.onload = () => {
+            let maxSize = 5;
+            let aspect = image.width / image.height;
+            let width = aspect >= 1 ? maxSize : maxSize * aspect;
+            let height = aspect >= 1 ? maxSize / aspect : maxSize;
+            let canvasData = this.getCurrentCanvasData();
+            let mesh = createImagePlane({
+              src: readerEvent.target.result,
+              width,
+              height,
+              position: canvasData.position,
+              quaternion: canvasData.quaternion,
+              scale: canvasData.scale,
+              canvas: canvasData,
+            });
+
+            this.selectImage(mesh);
+            this.updateImagePresentation();
+            window.dispatchEvent(new CustomEvent("penzil-project-change"));
+          };
+          image.src = readerEvent.target.result;
+        };
+        reader.readAsDataURL(file);
+        document.body.removeChild(input);
+      };
+
+      input.click();
+    },
+    selectImage(image) {
+      this.selectedImage = image;
+      this.selectedImageId = image?.uuid;
+      this.selectedImageScaleInput = image
+        ? (image.userData.image.scalePercent || 100) + "%"
+        : "100%";
+    },
+    getSelectedImage() {
+      if (
+        this.selectedImage &&
+        scene.getObjectByProperty("uuid", this.selectedImage.uuid)
+      ) {
+        return this.selectedImage;
+      }
+
+      if (this.selectedImageId) {
+        let image = scene.getObjectByProperty("uuid", this.selectedImageId);
+        if (image && image.userData.kind === "imagePlane") {
+          this.selectedImage = image;
+          return image;
+        }
+      }
+
+      this.selectedImage = undefined;
+      this.selectedImageId = undefined;
+      return undefined;
+    },
+    cloneCanvasData(canvasData) {
+      if (!canvasData) return undefined;
+
+      return {
+        shape: canvasData.shape,
+        position: canvasData.position.clone
+          ? canvasData.position.clone()
+          : new THREE.Vector3(
+              canvasData.position.x,
+              canvasData.position.y,
+              canvasData.position.z
+            ),
+        quaternion: canvasData.quaternion.clone
+          ? canvasData.quaternion.clone()
+          : new THREE.Quaternion(
+              canvasData.quaternion.x ?? canvasData.quaternion._x,
+              canvasData.quaternion.y ?? canvasData.quaternion._y,
+              canvasData.quaternion.z ?? canvasData.quaternion._z,
+              canvasData.quaternion.w ?? canvasData.quaternion._w
+            ),
+        scale: canvasData.scale.clone
+          ? canvasData.scale.clone()
+          : new THREE.Vector3(
+              canvasData.scale.x,
+              canvasData.scale.y,
+              canvasData.scale.z
+            ),
+      };
+    },
+    cloneStrokeOptions(stroke, forceOverride) {
+      return {
+        show_stroke: stroke.show_stroke,
+        color: stroke.color,
+        lineWidth: stroke.lineWidth,
+        force: forceOverride ? forceOverride.slice() : (stroke.force || []).slice(),
+      };
+    },
+    cloneFillOptions(fill) {
+      return {
+        show_fill: fill.show_fill,
+        color: fill.color,
+      };
+    },
+    getStrokeObjects() {
+      return scene.children.filter(
+        (object) => object.geometry?.type === "MeshLine" && object.layers.mask === 2
+      );
+    },
+    snapshotStrokeObject(strokeObject) {
+      let position = new THREE.Vector3();
+      let quaternion = new THREE.Quaternion();
+      let scale = new THREE.Vector3();
+
+      strokeObject.getWorldPosition(position);
+      strokeObject.getWorldQuaternion(quaternion);
+      strokeObject.getWorldScale(scale);
+
+      return {
+        uuid: strokeObject.uuid,
+        vertices: new Float32Array(strokeObject.geometry.points),
+        stroke: this.cloneStrokeOptions(strokeObject.userData.stroke),
+        fill: this.cloneFillOptions(strokeObject.userData.fill),
+        position,
+        quaternion,
+        scale,
+        matrix: strokeObject.matrix.clone(),
+        canvas: this.cloneCanvasData(strokeObject.userData.canvas),
+      };
+    },
+    snapshotStrokes() {
+      return this.getStrokeObjects().map((object) =>
+        this.snapshotStrokeObject(object)
+      );
+    },
+    restoreStrokeSnapshot(snapshot) {
+      draw.fromVertices(
+        new Float32Array(snapshot.vertices),
+        this.cloneStrokeOptions(snapshot.stroke),
+        this.cloneFillOptions(snapshot.fill),
+        false,
+        snapshot.uuid,
+        snapshot.position.clone(),
+        snapshot.quaternion.clone(),
+        snapshot.scale.clone(),
+        snapshot.matrix.clone(),
+        false,
+        this.cloneCanvasData(snapshot.canvas)
+      );
+    },
+    restoreStrokeSnapshots(snapshots) {
+      this.getStrokeObjects().forEach((object) => {
+        this.removeStrokeObject(object);
+      });
+
+      snapshots.forEach((snapshot) => {
+        this.restoreStrokeSnapshot(snapshot);
+      });
+    },
+    setImageState(image, state) {
+      image.scale.copy(state.scale);
+      image.userData.image.scalePercent = state.scalePercent;
+      image.updateMatrixWorld(true);
+      this.selectedImageScaleInput = state.scalePercent + "%";
+    },
+    snapshotImageState(image) {
+      return {
+        scale: image.scale.clone(),
+        scalePercent: image.userData.image.scalePercent || 100,
+      };
+    },
+    getStrokeWidthCallback(strokeObject, pointCount) {
+      return (p) => {
+        let length = pointCount || strokeObject.geometry.points.length / 3;
+        let force = strokeObject.userData.stroke.force || [];
+
+        function map(n, start1, stop1, start2, stop2) {
+          return ((n - start1) / (stop1 - start1)) * (stop2 - start2) + start2;
+        }
+
+        let index = Math.round(p * (length - 1));
+        let minWidth = 0;
+        let baseWidth = 3;
+        let width = (force[index] || 0) * 16;
+        let tailLength = 3;
+
+        if (index < tailLength) {
+          return map(index, minWidth, tailLength, minWidth, baseWidth + width);
+        }
+
+        if (index > length - tailLength) {
+          return map(
+            index,
+            length - tailLength,
+            length - 1,
+            baseWidth + width,
+            minWidth
+          );
+        }
+
+        return baseWidth + width;
+      };
+    },
+    refreshStrokeFill(strokeObject, points) {
+      if (!strokeObject.userData.fill?.show_fill || !strokeObject.children[0]) {
+        return;
+      }
+
+      let fillMesh = strokeObject.children[0];
+
+      if (points.length < 9) {
+        fillMesh.geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(new Float32Array([]), 3)
+        );
+        fillMesh.geometry.setIndex(null);
+        return;
+      }
+
+      fillMesh.geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(points, 3)
+      );
+      fillMesh.geometry.setIndex(
+        new THREE.BufferAttribute(
+          new Uint16Array(Earcut.triangulate(points, null, 3)),
+          1
+        )
+      );
+      fillMesh.geometry.attributes.position.needsUpdate = true;
+      fillMesh.geometry.index.needsUpdate = true;
+      fillMesh.geometry.computeBoundingSphere();
+      fillMesh.geometry.computeBoundingBox();
+    },
+    removeStrokeObject(strokeObject) {
+      scene.remove(strokeObject);
+
+      if (strokeObject.material) {
+        strokeObject.material.dispose();
+      }
+
+      strokeObject.children.forEach((child) => {
+        if (child.material) {
+          child.material.dispose();
+        }
+
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+      });
+
+      if (strokeObject.geometry) {
+        strokeObject.geometry.dispose();
+      }
+    },
+    restoreStrokeSegment(baseSnapshot, points, force) {
+      let snapshot = {
+        ...baseSnapshot,
+        position: baseSnapshot.position.clone(),
+        quaternion: baseSnapshot.quaternion.clone(),
+        scale: baseSnapshot.scale.clone(),
+        matrix: baseSnapshot.matrix.clone(),
+        canvas: this.cloneCanvasData(baseSnapshot.canvas),
+      };
+      snapshot.vertices = new Float32Array(points);
+      snapshot.stroke = this.cloneStrokeOptions(baseSnapshot.stroke, force);
+      snapshot.uuid = undefined;
+      this.restoreStrokeSnapshot(snapshot);
+    },
+    scaleStrokePointsOnImage(strokeObject, image, factor) {
+      let sourcePoints = strokeObject.geometry.points;
+
+      if (!sourcePoints || sourcePoints.length < 3) return false;
+
+      strokeObject.updateMatrixWorld(true);
+      image.updateMatrixWorld(true);
+
+      let imageToWorld = image.matrixWorld.clone();
+      let worldToImage = image.matrixWorld.clone().invert();
+      let strokeToWorld = strokeObject.matrixWorld.clone();
+      let worldToStroke = strokeObject.matrixWorld.clone().invert();
+      let halfWidth = image.userData.image.width / 2;
+      let halfHeight = image.userData.image.height / 2;
+      let planeTolerance = Math.max(image.userData.image.width, image.userData.image.height) * 0.04;
+      let segments = [];
+      let currentPoints = [];
+      let currentForce = [];
+      let force = strokeObject.userData.stroke.force || [];
+      let insideCount = 0;
+      let outsideCount = 0;
+
+      function keepSegment() {
+        if (currentPoints.length >= 6) {
+          segments.push({
+            points: currentPoints.slice(),
+            force: currentForce.slice(),
+          });
+        }
+
+        currentPoints = [];
+        currentForce = [];
+      }
+
+      for (let i = 0; i < sourcePoints.length; i += 3) {
+        let strokeLocalPoint = new THREE.Vector3(
+          sourcePoints[i],
+          sourcePoints[i + 1],
+          sourcePoints[i + 2]
+        );
+        let imageLocalPoint = strokeLocalPoint
+          .clone()
+          .applyMatrix4(strokeToWorld)
+          .applyMatrix4(worldToImage);
+
+        let pointIsInsideImage =
+          Math.abs(imageLocalPoint.x) <= halfWidth &&
+          Math.abs(imageLocalPoint.y) <= halfHeight &&
+          Math.abs(imageLocalPoint.z) <= planeTolerance;
+
+        if (!pointIsInsideImage) {
+          outsideCount++;
+          keepSegment();
+          continue;
+        }
+
+        insideCount++;
+        imageLocalPoint.x *= factor;
+        imageLocalPoint.y *= factor;
+
+        let nextStrokeLocalPoint = imageLocalPoint
+          .applyMatrix4(imageToWorld)
+          .applyMatrix4(worldToStroke);
+
+        currentPoints.push(
+          nextStrokeLocalPoint.x,
+          nextStrokeLocalPoint.y,
+          nextStrokeLocalPoint.z
+        );
+        currentForce.push(force[i / 3] || 0);
+      }
+
+      keepSegment();
+
+      if (insideCount === 0) return false;
+
+      if (segments.length === 0) {
+        this.removeStrokeObject(strokeObject);
+        return true;
+      }
+
+      if (outsideCount > 0) {
+        let baseSnapshot = this.snapshotStrokeObject(strokeObject);
+        this.removeStrokeObject(strokeObject);
+        segments.forEach((segment) => {
+          this.restoreStrokeSegment(baseSnapshot, segment.points, segment.force);
+        });
+        return true;
+      }
+
+      let nextPoints = new Float32Array(segments[0].points);
+
+      strokeObject.geometry.setPoints(
+        nextPoints,
+        this.getStrokeWidthCallback(strokeObject, nextPoints.length / 3)
+      );
+      this.refreshStrokeFill(strokeObject, nextPoints);
+      strokeObject.geometry.computeBoundingSphere();
+      strokeObject.geometry.computeBoundingBox();
+      strokeObject.userData.vertices = Array.from(
+        nextPoints,
+        (value, index) => {
+          if (index % 3 === 0) {
+            return [
+              nextPoints[index],
+              nextPoints[index + 1],
+              nextPoints[index + 2],
+            ];
+          }
+
+          return undefined;
+        }
+      ).filter(Boolean);
+      return true;
+    },
+    scaleStrokesOnImage(image, factor) {
+      this.getStrokeObjects().forEach((object) => {
+        this.scaleStrokePointsOnImage(object, image, factor);
+      });
+    },
+    performImageScale(image, amount, nextPercent) {
+      this.scaleStrokesOnImage(image, amount);
+      image.scale.multiplyScalar(amount);
+      image.updateMatrixWorld(true);
+      image.userData.image.scalePercent = Math.round(nextPercent);
+      this.selectedImageScaleInput = image.userData.image.scalePercent + "%";
+      this.updateImagePresentation();
+      renderer.render(scene, camera);
+      window.dispatchEvent(new CustomEvent("penzil-project-change"));
+    },
+    applyImageScale(percent) {
+      let image = this.getSelectedImage();
+      if (!image) return;
+
+      let nextPercent = THREE.MathUtils.clamp(percent, 10, 1000);
+      let currentPercent = image.userData.image.scalePercent || 100;
+      let factor = nextPercent / currentPercent;
+
+      if (factor === 1) return;
+
+      let beforeImageState = this.snapshotImageState(image);
+      let beforeStrokes = this.snapshotStrokes();
+      let component = this;
+
+      this.performImageScale(image, factor, nextPercent);
+
+      let afterImageState = this.snapshotImageState(image);
+      let afterStrokes = this.snapshotStrokes();
+
+      undoManager.add({
+        undo() {
+          component.setImageState(image, beforeImageState);
+          component.restoreStrokeSnapshots(beforeStrokes);
+          renderer.render(scene, camera);
+        },
+        redo() {
+          component.setImageState(image, afterImageState);
+          component.restoreStrokeSnapshots(afterStrokes);
+          renderer.render(scene, camera);
+        },
+      });
+
+      if (undoRedoComponent) {
+        undoRedoComponent.$.ctx.updateUi();
+      }
+    },
+    scaleSelectedImage(amount) {
+      let image = this.getSelectedImage();
+      if (!image) return;
+
+      this.applyImageScale((image.userData.image.scalePercent || 100) * amount);
+    },
+    setSelectedImageScale(percent) {
+      this.applyImageScale(percent);
+    },
+    commitSelectedImageScale() {
+      let value = parseFloat(String(this.selectedImageScaleInput).replace("%", ""));
+
+      if (Number.isNaN(value)) {
+        let image = this.getSelectedImage();
+        this.selectedImageScaleInput = image
+          ? (image.userData.image.scalePercent || 100) + "%"
+          : "100%";
+        return;
+      }
+
+      this.setSelectedImageScale(value);
+    },
+    stepSelectedImageScale(amount) {
+      let image = this.getSelectedImage();
+      if (!image) return;
+
+      this.setSelectedImageScale((image.userData.image.scalePercent || 100) + amount);
+    },
     resetTransformation() {
       canvas.position.set(
         this.startPosition.x,
@@ -360,6 +1029,8 @@ export default {
         this.startQuaternion.w
       );
       canvas.scale.set(this.startScale.x, this.startScale.y, this.startScale.z);
+      this.updateRotationReadout();
+      this.updateImagePresentation();
       renderer.render(scene, camera);
       this.transformationResetDisabled = true;
     },
@@ -369,7 +1040,6 @@ export default {
     },
     setShapeAndMatrix(shape, position, quaternion, scale) {
       this.setCanvasShape(shape);
-      console.log(position);
       canvas.position.set(position.x, position.y, position.z);
       canvas.quaternion.set(
         quaternion.x,
@@ -378,6 +1048,8 @@ export default {
         quaternion.w
       );
       canvas.scale.set(scale.x, scale.y, scale.z);
+      this.updateRotationReadout();
+      this.updateImagePresentation();
       renderer.render(scene, camera);
     },
     toggleTransformMode() {
@@ -583,7 +1255,7 @@ export default {
             );
           }
         } catch (error) {
-          console.log(error);
+          // Some scene objects do not carry saved canvas data.
         }
         this.$emit("set-tool-enabled", true);
         this.restoringTransformation = false;
@@ -691,6 +1363,112 @@ export default {
   padding: 0px 2px;
 }
 
+.image-tools {
+  height: auto;
+  border-radius: 8px;
+  gap: 4px;
+  padding: 6px 8px;
+  flex-direction: column;
+  align-items: center;
+  align-self: flex-start;
+}
+
+.image-tools button {
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #1c1c1e;
+  font-size: 0.38em;
+  font-weight: 900;
+  padding: 0 6px;
+}
+
+.image-import-button {
+  width: 82px;
+}
+
+.image-scale-row {
+  display: grid;
+  grid-template-columns: 24px 42px 24px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.image-scale-row input {
+  min-width: 0;
+  width: 42px;
+  height: 24px;
+  border: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  color: #1c1c1e;
+  font-size: 0.38em;
+  font-weight: 900;
+  text-align: center;
+  padding: 0 2px;
+  outline: none;
+}
+
+.image-tools button:not(:disabled):hover,
+.image-tools button:not(:disabled):focus {
+  background-color: #ffe8b3;
+}
+
+.image-tools button:disabled {
+  opacity: 0.35;
+}
+
+.rotation-readout {
+  height: auto;
+  border-radius: 8px;
+  color: #1c1c1e;
+  font-size: 0.62em;
+  line-height: 1;
+  padding: 6px 8px;
+  white-space: nowrap;
+  gap: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  align-self: flex-start;
+}
+
+.rotation-readout label {
+  width: auto;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.rotation-readout button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background-color: #ffe8b3;
+  color: #1c1c1e;
+  font-size: 1.2em;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0;
+}
+
+.rotation-readout input {
+  width: 32px;
+  height: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  color: #1c1c1e;
+  font-size: 1em;
+  font-weight: 900;
+  text-align: center;
+  padding: 0 2px;
+  outline: none;
+}
+
 .active {
   box-shadow: inset 0px 0px 0px 1px #fff;
   background-color: #ffe8b3;
@@ -732,6 +1510,34 @@ label {
   .icon-and-label {
     max-width: 32px;
     overflow: hidden;
+  }
+
+  .rotation-readout {
+    font-size: 0.58em;
+    max-width: 86px;
+    padding: 6px 8px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .rotation-readout label {
+    height: 24px;
+  }
+
+  .rotation-readout input {
+    width: 28px;
+    height: 22px;
+  }
+
+  .rotation-readout button {
+    width: 22px;
+    height: 22px;
+  }
+
+  .image-tools {
+    width: 94px;
+    height: auto;
+    padding: 6px 8px;
   }
 }
 </style>
