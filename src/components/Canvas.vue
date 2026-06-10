@@ -148,8 +148,8 @@
           alt="Reset canvas position, rotation and scale"
         />
       </span>
-      <button class="new-center-button" type="button" @click="useNewCenter">
-        {{ hasNewCenter ? "New" : "Set New" }}
+      <button class="new-center-button" type="button" @click="setNewCameraCenter">
+        New
       </button>
     </div>
     <span
@@ -348,8 +348,6 @@ export default {
       startPosition: new THREE.Vector3(0.001, 0.001, 0.001),
       startQuaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
       startScale: new THREE.Vector3(1, 1, 1),
-      newCenter: undefined,
-      hasNewCenter: false,
       transformationResetDisabled: true,
       transformationEnabled: true,
       visible: true,
@@ -371,7 +369,7 @@ export default {
     mirror: [Boolean, String],
     mouse: Object,
   },
-  emits: ["selected-canvas-shape", "set-tool-enabled"],
+  emits: ["selected-canvas-shape", "set-tool-enabled", "set-camera-center"],
   methods: {
     setUp() {
       const material = this.material;
@@ -1046,15 +1044,10 @@ export default {
       });
       this.transformationResetDisabled = true;
     },
-    useNewCenter() {
-      if (!this.hasNewCenter) {
-        this.newCenter = this.getCanvasTransform();
-        this.hasNewCenter = true;
-        return;
-      }
-
-      this.applyCanvasTransform(this.newCenter);
-      this.transformationResetDisabled = true;
+    setNewCameraCenter() {
+      let center = new THREE.Vector3();
+      canvas.getWorldPosition(center);
+      this.$emit("set-camera-center", center);
     },
     restoreTransformation() {
       this.$emit("set-tool-enabled", false);
