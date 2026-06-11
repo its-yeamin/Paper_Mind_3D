@@ -148,8 +148,11 @@
           alt="Reset canvas position, rotation and scale"
         />
       </span>
-      <button class="new-center-button" type="button" @click="useNewCenter">
-        {{ hasNewCenter ? "New" : "Set New" }}
+      <button class="home-button" type="button" @click="setHomeFromCanvas">
+        Set Home
+      </button>
+      <button class="home-button" type="button" @click="restoreDefaultHome">
+        Default
       </button>
     </div>
     <span
@@ -348,8 +351,11 @@ export default {
       startPosition: new THREE.Vector3(0.001, 0.001, 0.001),
       startQuaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
       startScale: new THREE.Vector3(1, 1, 1),
-      newCenter: undefined,
-      hasNewCenter: false,
+      defaultHome: {
+        position: new THREE.Vector3(0.001, 0.001, 0.001),
+        quaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
+        scale: new THREE.Vector3(1, 1, 1),
+      },
       transformationResetDisabled: true,
       transformationEnabled: true,
       visible: true,
@@ -1046,15 +1052,18 @@ export default {
       });
       this.transformationResetDisabled = true;
     },
-    useNewCenter() {
-      if (!this.hasNewCenter) {
-        this.newCenter = this.getCanvasTransform();
-        this.hasNewCenter = true;
-        return;
-      }
-
-      this.applyCanvasTransform(this.newCenter);
+    setHomeFromCanvas() {
+      let home = this.getCanvasTransform();
+      this.startPosition.copy(home.position);
+      this.startQuaternion.copy(home.quaternion);
+      this.startScale.copy(home.scale);
       this.transformationResetDisabled = true;
+    },
+    restoreDefaultHome() {
+      this.startPosition.copy(this.defaultHome.position);
+      this.startQuaternion.copy(this.defaultHome.quaternion);
+      this.startScale.copy(this.defaultHome.scale);
+      this.resetTransformation();
     },
     restoreTransformation() {
       this.$emit("set-tool-enabled", false);
@@ -1392,8 +1401,8 @@ export default {
   align-self: flex-start;
 }
 
-.new-center-button {
-  min-width: 72px;
+.home-button {
+  min-width: 76px;
   height: 44px;
   border: 0;
   border-radius: 22px;
@@ -1405,8 +1414,8 @@ export default {
   filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
 }
 
-.new-center-button:hover,
-.new-center-button:focus {
+.home-button:hover,
+.home-button:focus {
   background-color: #ffe8b3;
 }
 
