@@ -29,7 +29,6 @@
     ref="raycastCanvas"
     @selected-canvas-shape="setSelectedCanvasShape"
     @set-tool-enabled="setToolEnabled"
-    @set-camera-center="setCameraCenter"
     :selectedShape="canvasShape"
     :selectedTool="tool"
     :mirror="mirror"
@@ -689,29 +688,6 @@ export default {
       let nextZoom = THREE.MathUtils.clamp((percent / 100) * 3, 1.5, 4000);
       this.cameraZoomPercent = Math.round((nextZoom / 3) * 100);
       cameraControls.zoomTo(nextZoom, true);
-    },
-    setCameraCenter: function (center) {
-      let target = new THREE.Vector3();
-      cameraControls.getTarget(target);
-      let offset = camera.position.clone().sub(target);
-      let nextPosition = center.clone().add(offset);
-
-      cameraControls.dampingFactor = 0.5;
-      cameraControls.enabled = false;
-      cameraControls.setLookAt(
-        nextPosition.x,
-        nextPosition.y,
-        nextPosition.z,
-        center.x,
-        center.y,
-        center.z,
-        true
-      );
-      cameraControls.enabled = true;
-      this.cameraResetDisabled = false;
-      setTimeout(() => {
-        cameraControls.dampingFactor = 20;
-      }, 100);
     },
     setSelectedObject: function (val) {
       this.selected = val;
