@@ -706,6 +706,9 @@ export default {
       let nextPosition = center.clone().add(offset);
 
       cameraHomeTarget.copy(center);
+      if (gridGuide) {
+        gridGuide.position.copy(center);
+      }
       cameraControls.dampingFactor = 0.5;
       cameraControls.enabled = false;
       cameraControls.setLookAt(
