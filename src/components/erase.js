@@ -253,6 +253,7 @@ let erase = {
                     let restored = createImagePlane(imageState);
                     restored.uuid = imageState.uuid;
                     renderer.render(scene, camera);
+                    window.dispatchEvent(new CustomEvent("penzil-project-change"));
                 },
                 redo: function () {
                     let image = scene.getObjectByProperty(
@@ -264,6 +265,7 @@ let erase = {
                         disposeImagePlane(image);
                     }
                     renderer.render(scene, camera);
+                    window.dispatchEvent(new CustomEvent("penzil-project-change"));
                 }
             });
 

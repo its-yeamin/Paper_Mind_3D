@@ -356,6 +356,7 @@ export default {
       window.addEventListener("resize", this.onWindowResize);
       window.addEventListener("orientationchange", this.onWindowResize);
       window.addEventListener("penzil-project-change", scheduleAutoSave);
+      window.addEventListener("penzil-home-restore", this.restoreProjectHome);
       this.onWindowResize();
 
       renderer.render(scene, camera);
@@ -731,6 +732,9 @@ export default {
       setTimeout(() => {
         cameraControls.dampingFactor = 20;
       }, 100);
+    },
+    restoreProjectHome: function (event) {
+      this.setCameraHome(event.detail);
     },
     setSelectedObject: function (val) {
       this.selected = val;

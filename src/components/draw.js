@@ -509,10 +509,10 @@ let draw = {
         }
         if (quaternion) {
             this.l.mesh.quaternion.set(
-                quaternion._x,
-                quaternion._y,
-                quaternion._z,
-                quaternion._w
+                quaternion.x ?? quaternion._x,
+                quaternion.y ?? quaternion._y,
+                quaternion.z ?? quaternion._z,
+                quaternion.w ?? quaternion._w
             );
         }
         if (scale) {

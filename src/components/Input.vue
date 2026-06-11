@@ -450,7 +450,14 @@ export default {
       }
     },
     onEnd: function (event) {
-      if (this.toolEnabled === false) return;
+      if (this.toolEnabled === false) {
+        this.mouse.down = false;
+        this.mouse.multiTouched = false;
+        this.mouse.eventCancelled = false;
+        this.movingCanvas = false;
+        this.touches = [];
+        return;
+      }
       this.touches = [];
 
       if (!event.pointerType && event.button && event.button != 0) return;

@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import { scene, renderer, camera } from "../App.vue";
+import { cameraHomeTarget, scene, renderer, camera } from "../App.vue";
 import { draw } from "./draw.js";
 import { createImagePlane, disposeImagePlane } from "./imagePlane.js";
+import { applyCanvasHomeState, getCanvasHomeState } from "./Canvas.vue";
 
 const DB_NAME = "penzil-projects";
 const DB_VERSION = 1;
@@ -90,6 +91,25 @@ function serializeMatrix(matrix) {
   return matrix.elements.slice();
 }
 
+function serializeHomeState(home) {
+  if (!home?.current) return undefined;
+
+  return {
+    current: {
+      position: serializeVector(home.current.position),
+      quaternion: serializeQuaternion(home.current.quaternion),
+      scale: serializeVector(home.current.scale),
+    },
+    default: home.default
+      ? {
+          position: serializeVector(home.default.position),
+          quaternion: serializeQuaternion(home.default.quaternion),
+          scale: serializeVector(home.default.scale),
+        }
+      : undefined,
+  };
+}
+
 function deserializeVector(value) {
   return new THREE.Vector3(value?.x || 0, value?.y || 0, value?.z || 0);
 }
@@ -113,6 +133,25 @@ function deserializeMatrix(value) {
   }
 
   return matrix;
+}
+
+function deserializeHomeState(home) {
+  if (!home?.current) return undefined;
+
+  return {
+    current: {
+      position: deserializeVector(home.current.position),
+      quaternion: deserializeQuaternion(home.current.quaternion),
+      scale: deserializeVector(home.current.scale),
+    },
+    default: home.default
+      ? {
+          position: deserializeVector(home.default.position),
+          quaternion: deserializeQuaternion(home.default.quaternion),
+          scale: deserializeVector(home.default.scale),
+        }
+      : undefined,
+  };
 }
 
 function serializeStrokeObject(obj) {
@@ -190,6 +229,8 @@ export function serializeProject() {
     type: "penzil-project",
     version: PROJECT_VERSION,
     savedAt: new Date().toISOString(),
+    home: serializeHomeState(getCanvasHomeState()),
+    cameraHome: serializeVector(cameraHomeTarget),
     strokes,
     images,
   };
@@ -229,6 +270,8 @@ export function normalizeProject(data) {
     version: data?.version || 1,
     name: normalizeProjectName(data?.name),
     savedAt: data?.savedAt,
+    home: data?.home,
+    cameraHome: data?.cameraHome,
     strokes: Array.isArray(data?.strokes) ? data.strokes : [],
     images: Array.isArray(data?.images) ? data.images : [],
   };
@@ -317,6 +360,26 @@ export function restoreProject(data, replace = true) {
     });
   });
 
+  const home = deserializeHomeState(project.home);
+  if (home) {
+    applyCanvasHomeState(home);
+  }
+
+  const cameraHome = project.cameraHome
+    ? deserializeVector(project.cameraHome)
+    : home?.current?.position;
+
+  if (cameraHome) {
+    window.dispatchEvent(
+      new CustomEvent("penzil-home-restore", {
+        detail: {
+          center: cameraHome,
+          resetView: false,
+        },
+      })
+    );
+  }
+
   renderer.render(scene, camera);
   restoringProject = false;
 }
@@ -365,10 +428,7 @@ export function loadCurrentProject() {
 
   return runTransaction("readonly", (store) => store.get(activeProjectId))
     .then((record) => {
-      if (
-        record?.project?.strokes?.length > 0 ||
-        record?.project?.images?.length > 0
-      ) {
+      if (record?.project) {
         restoreProject(record.project, true);
         return true;
       }

@@ -330,6 +330,42 @@ let raycaster;
 let canvasMirror;
 let geometry = new THREE.PlaneGeometry(5, 5);
 let headGeometry;
+let canvasComponent;
+
+function cloneHomeTransform(home) {
+  return {
+    position: home.position.clone(),
+    quaternion: home.quaternion.clone(),
+    scale: home.scale.clone(),
+  };
+}
+
+export function getCanvasHomeState() {
+  if (!canvasComponent) return undefined;
+
+  return {
+    current: cloneHomeTransform({
+      position: canvasComponent.startPosition,
+      quaternion: canvasComponent.startQuaternion,
+      scale: canvasComponent.startScale,
+    }),
+    default: cloneHomeTransform(canvasComponent.defaultHome),
+  };
+}
+
+export function applyCanvasHomeState(home) {
+  if (!canvasComponent || !home?.current) return;
+
+  canvasComponent.startPosition.copy(home.current.position);
+  canvasComponent.startQuaternion.copy(home.current.quaternion);
+  canvasComponent.startScale.copy(home.current.scale);
+
+  if (home.default) {
+    canvasComponent.defaultHome.position.copy(home.default.position);
+    canvasComponent.defaultHome.quaternion.copy(home.default.quaternion);
+    canvasComponent.defaultHome.scale.copy(home.default.scale);
+  }
+}
 
 export default {
   name: "Canvas",
@@ -726,13 +762,17 @@ export default {
       });
     },
     setImageState(image, state) {
-      image.scale.copy(state.scale);
-      image.userData.image.scalePercent = state.scalePercent;
-      image.updateMatrixWorld(true);
+      let targetImage = scene.getObjectByProperty("uuid", state.uuid) || image;
+      if (!targetImage || !scene.getObjectByProperty("uuid", targetImage.uuid)) return;
+
+      targetImage.scale.copy(state.scale);
+      targetImage.userData.image.scalePercent = state.scalePercent;
+      targetImage.updateMatrixWorld(true);
       this.selectedImageScaleInput = state.scalePercent + "%";
     },
     snapshotImageState(image) {
       return {
+        uuid: image.uuid,
         scale: image.scale.clone(),
         scalePercent: image.userData.image.scalePercent || 100,
       };
@@ -989,11 +1029,13 @@ export default {
           component.setImageState(image, beforeImageState);
           component.restoreStrokeSnapshots(beforeStrokes);
           renderer.render(scene, camera);
+          window.dispatchEvent(new CustomEvent("penzil-project-change"));
         },
         redo() {
           component.setImageState(image, afterImageState);
           component.restoreStrokeSnapshots(afterStrokes);
           renderer.render(scene, camera);
+          window.dispatchEvent(new CustomEvent("penzil-project-change"));
         },
       });
 
@@ -1308,6 +1350,7 @@ export default {
     },
   },
   mounted() {
+    canvasComponent = this;
     this.setCanvasShape(this.shape);
   },
 };
