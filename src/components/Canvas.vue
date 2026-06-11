@@ -1065,7 +1065,7 @@ export default {
       this.startScale.copy(home.scale);
       this.$emit("set-camera-home", {
         center: this.startPosition.clone(),
-        resetView: false,
+        resetView: true,
       });
       this.transformationResetDisabled = true;
     },
