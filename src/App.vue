@@ -29,6 +29,7 @@
     ref="raycastCanvas"
     @selected-canvas-shape="setSelectedCanvasShape"
     @set-tool-enabled="setToolEnabled"
+    @set-camera-home="setCameraHome"
     :selectedShape="canvasShape"
     :selectedTool="tool"
     :mirror="mirror"
@@ -107,6 +108,7 @@ export let camera = new THREE.PerspectiveCamera(
 //     1, 1000 );
 
 export let scene, drawingScene, cameraControls, vm, drawingprop;
+export let cameraHomeTarget = new THREE.Vector3(0, 0, 0);
 
 var main, clock, gridGuide;
 var touchPointers = new Map();
@@ -317,10 +319,16 @@ export default {
         var z = target.z;
 
         if (
-          camera.position.z != 10 ||
-          x != 0 ||
-          y != 0 ||
-          z != 0 ||
+          camera.position.distanceTo(
+            new THREE.Vector3(
+              cameraHomeTarget.x,
+              cameraHomeTarget.y,
+              cameraHomeTarget.z + 10
+            )
+          ) > 0.01 ||
+          Math.abs(x - cameraHomeTarget.x) > 0.01 ||
+          Math.abs(y - cameraHomeTarget.y) > 0.01 ||
+          Math.abs(z - cameraHomeTarget.z) > 0.01 ||
           camera.zoom != 3
         ) {
           this.cameraResetDisabled = false;
@@ -688,6 +696,38 @@ export default {
       let nextZoom = THREE.MathUtils.clamp((percent / 100) * 3, 1.5, 4000);
       this.cameraZoomPercent = Math.round((nextZoom / 3) * 100);
       cameraControls.zoomTo(nextZoom, true);
+    },
+    setCameraHome: function ({ center, resetView = false }) {
+      let currentTarget = new THREE.Vector3();
+      cameraControls.getTarget(currentTarget);
+      let offset = resetView
+        ? new THREE.Vector3(0, 0, 10)
+        : camera.position.clone().sub(currentTarget);
+      let nextPosition = center.clone().add(offset);
+
+      cameraHomeTarget.copy(center);
+      cameraControls.dampingFactor = 0.5;
+      cameraControls.enabled = false;
+      cameraControls.setLookAt(
+        nextPosition.x,
+        nextPosition.y,
+        nextPosition.z,
+        center.x,
+        center.y,
+        center.z,
+        true
+      );
+
+      if (resetView) {
+        cameraControls.zoomTo(3, true);
+        this.cameraZoomPercent = 100;
+      }
+
+      cameraControls.enabled = true;
+      this.cameraResetDisabled = false;
+      setTimeout(() => {
+        cameraControls.dampingFactor = 20;
+      }, 100);
     },
     setSelectedObject: function (val) {
       this.selected = val;

@@ -58,7 +58,7 @@
 <script>
 import * as THREE from "three";
 // import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { cameraControls } from "../App.vue";
+import { cameraControls, cameraHomeTarget } from "../App.vue";
 
 let viewPortRenderer, viewPortScene, viewPortCamera;
 
@@ -328,7 +328,15 @@ export default {
     resetCamera: function () {
       cameraControls.dampingFactor = 0.5;
       cameraControls.enabled = false;
-      cameraControls.setLookAt(0, 0, 10, 0, 0, 0, true);
+      cameraControls.setLookAt(
+        cameraHomeTarget.x,
+        cameraHomeTarget.y,
+        cameraHomeTarget.z + 10,
+        cameraHomeTarget.x,
+        cameraHomeTarget.y,
+        cameraHomeTarget.z,
+        true
+      );
       cameraControls.zoomTo(3, true);
       this.zoomInput = "100%";
       setTimeout(() => {

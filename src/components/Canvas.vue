@@ -377,7 +377,7 @@ export default {
     mirror: [Boolean, String],
     mouse: Object,
   },
-  emits: ["selected-canvas-shape", "set-tool-enabled"],
+  emits: ["selected-canvas-shape", "set-tool-enabled", "set-camera-home"],
   methods: {
     setUp() {
       const material = this.material;
@@ -1044,12 +1044,18 @@ export default {
       this.updateImagePresentation();
       renderer.render(scene, camera);
     },
-    resetTransformation() {
+    resetTransformation(updateCameraHome = true) {
       this.applyCanvasTransform({
         position: this.startPosition,
         quaternion: this.startQuaternion,
         scale: this.startScale,
       });
+      if (updateCameraHome) {
+        this.$emit("set-camera-home", {
+          center: this.startPosition.clone(),
+          resetView: false,
+        });
+      }
       this.transformationResetDisabled = true;
     },
     setHomeFromCanvas() {
@@ -1057,13 +1063,21 @@ export default {
       this.startPosition.copy(home.position);
       this.startQuaternion.copy(home.quaternion);
       this.startScale.copy(home.scale);
+      this.$emit("set-camera-home", {
+        center: this.startPosition.clone(),
+        resetView: false,
+      });
       this.transformationResetDisabled = true;
     },
     restoreDefaultHome() {
       this.startPosition.copy(this.defaultHome.position);
       this.startQuaternion.copy(this.defaultHome.quaternion);
       this.startScale.copy(this.defaultHome.scale);
-      this.resetTransformation();
+      this.resetTransformation(false);
+      this.$emit("set-camera-home", {
+        center: this.startPosition.clone(),
+        resetView: true,
+      });
     },
     restoreTransformation() {
       this.$emit("set-tool-enabled", false);
