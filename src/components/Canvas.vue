@@ -197,48 +197,6 @@
         </button>
       </span>
     </span>
-    <span
-      class="canvas-button rotation-readout"
-      v-if="!shapeSelectionVisibility"
-      v-bind:class="[!visible ? 'disabled' : '']"
-    >
-      <label>
-        X
-        <button type="button" @click="stepRotation('x', -5)">-</button>
-        <input
-          v-model="rotationInput.x"
-          inputmode="numeric"
-          @change="commitRotationInput('x')"
-          @keydown.enter="commitRotationInput('x')"
-          @focus="$event.target.select()"
-        />
-        <button type="button" @click="stepRotation('x', 5)">+</button>
-      </label>
-      <label>
-        Y
-        <button type="button" @click="stepRotation('y', -5)">-</button>
-        <input
-          v-model="rotationInput.y"
-          inputmode="numeric"
-          @change="commitRotationInput('y')"
-          @keydown.enter="commitRotationInput('y')"
-          @focus="$event.target.select()"
-        />
-        <button type="button" @click="stepRotation('y', 5)">+</button>
-      </label>
-      <label>
-        Z
-        <button type="button" @click="stepRotation('z', -5)">-</button>
-        <input
-          v-model="rotationInput.z"
-          inputmode="numeric"
-          @change="commitRotationInput('z')"
-          @keydown.enter="commitRotationInput('z')"
-          @focus="$event.target.select()"
-        />
-        <button type="button" @click="stepRotation('z', 5)">+</button>
-      </label>
-    </span>
     <!-- <span
       v-bind:class="[!visible ? 'disabled' : '']"
       class="canvas-button"
@@ -409,8 +367,6 @@ export default {
       snap: false,
       shapeSelectionVisibility: false,
       restoringTransformation: false,
-      rotationDegrees: { x: 0, y: 0, z: 0 },
-      rotationInput: { x: "0", y: "0", z: "0" },
       selectedImage: undefined,
       selectedImageId: undefined,
       selectedImageScaleInput: "100%",
@@ -428,8 +384,6 @@ export default {
       const material = this.material;
       canvas = new THREE.Mesh(geometry, material);
       scene.add(canvas);
-      this.updateRotationReadout();
-
       controls = new TransformControls(camera, renderer.domElement);
       controls.mode = "combined";
       // controls.scale.set(1.1, 1.1, 1.1);
@@ -437,7 +391,6 @@ export default {
         //this is not very elegant but…
         if (vm != undefined) {
           vm.$refs.raycastCanvas.transformationResetDisabled = false;
-          vm.$refs.raycastCanvas.updateRotationReadout();
           vm.$refs.raycastCanvas.updateImagePresentation();
         }
 
@@ -540,53 +493,6 @@ export default {
         object.material.polygonOffsetUnits = -4;
         object.material.needsUpdate = true;
       });
-    },
-    updateRotationReadout() {
-      if (!canvas) return;
-
-      let euler = new THREE.Euler().setFromQuaternion(
-        canvas.quaternion,
-        "XYZ"
-      );
-
-      this.rotationDegrees = {
-        x: Math.round(THREE.MathUtils.radToDeg(euler.x)),
-        y: Math.round(THREE.MathUtils.radToDeg(euler.y)),
-        z: Math.round(THREE.MathUtils.radToDeg(euler.z)),
-      };
-      this.rotationInput = {
-        x: String(this.rotationDegrees.x),
-        y: String(this.rotationDegrees.y),
-        z: String(this.rotationDegrees.z),
-      };
-    },
-    commitRotationInput(axis) {
-      let value = parseFloat(this.rotationInput[axis]);
-
-      if (Number.isNaN(value)) {
-        this.updateRotationReadout();
-        return;
-      }
-
-      this.rotationDegrees[axis] = Math.round(value);
-
-      let euler = new THREE.Euler(
-        THREE.MathUtils.degToRad(this.rotationDegrees.x),
-        THREE.MathUtils.degToRad(this.rotationDegrees.y),
-        THREE.MathUtils.degToRad(this.rotationDegrees.z),
-        "XYZ"
-      );
-
-      canvas.quaternion.setFromEuler(euler);
-      canvas.updateMatrixWorld(true);
-      this.transformationResetDisabled = false;
-      this.updateRotationReadout();
-      renderer.render(scene, camera);
-    },
-    stepRotation(axis, amount) {
-      this.rotationDegrees[axis] += amount;
-      this.rotationInput[axis] = String(this.rotationDegrees[axis]);
-      this.commitRotationInput(axis);
     },
     getCurrentCanvasData() {
       let position = new THREE.Vector3();
@@ -1091,7 +997,6 @@ export default {
       canvas.position.copy(transform.position);
       canvas.quaternion.copy(transform.quaternion);
       canvas.scale.copy(transform.scale);
-      this.updateRotationReadout();
       this.updateImagePresentation();
       renderer.render(scene, camera);
     },
@@ -1144,7 +1049,6 @@ export default {
         quaternion.w
       );
       canvas.scale.set(scale.x, scale.y, scale.z);
-      this.updateRotationReadout();
       this.updateImagePresentation();
       renderer.render(scene, camera);
     },
@@ -1546,59 +1450,6 @@ export default {
   opacity: 0.35;
 }
 
-.rotation-readout {
-  height: auto;
-  border-radius: 8px;
-  color: #1c1c1e;
-  font-size: 0.62em;
-  line-height: 1;
-  padding: 6px 8px;
-  white-space: nowrap;
-  gap: 4px;
-  flex-direction: column;
-  align-items: flex-start;
-  align-self: flex-start;
-}
-
-.rotation-readout label {
-  width: auto;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0;
-}
-
-.rotation-readout button {
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 4px;
-  background-color: #ffe8b3;
-  color: #1c1c1e;
-  font-size: 1.2em;
-  font-weight: 900;
-  line-height: 1;
-  padding: 0;
-}
-
-.rotation-readout input {
-  width: 32px;
-  height: 24px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 4px;
-  color: #1c1c1e;
-  font-size: 1em;
-  font-weight: 900;
-  text-align: center;
-  padding: 0 2px;
-  outline: none;
-}
-
-
-
-
-
 .active {
   box-shadow: inset 0px 0px 0px 1px #fff;
   background-color: #ffe8b3;
@@ -1640,28 +1491,6 @@ label {
   .icon-and-label {
     max-width: 32px;
     overflow: hidden;
-  }
-
-  .rotation-readout {
-    font-size: 0.58em;
-    max-width: 86px;
-    padding: 6px 8px;
-    white-space: normal;
-    line-height: 1.2;
-  }
-
-  .rotation-readout label {
-    height: 24px;
-  }
-
-  .rotation-readout input {
-    width: 28px;
-    height: 22px;
-  }
-
-  .rotation-readout button {
-    width: 22px;
-    height: 22px;
   }
 
   .image-tools {
