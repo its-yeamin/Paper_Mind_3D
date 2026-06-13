@@ -322,15 +322,6 @@
     @click="toggleShapeSelectionVisibility()"
     v-bind:style="[shapeSelectionVisibility ? 'z-index: 9' : '']"
   ></div>
-  <div
-    class="angle-gizmo-readout"
-    v-if="angleHud.display"
-    v-bind:style="{ left: angleHud.left + 'px', top: angleHud.top + 'px' }"
-  >
-    <span>X {{ rotationDegrees.x }}°</span>
-    <span>Y {{ rotationDegrees.y }}°</span>
-    <span>Z {{ rotationDegrees.z }}°</span>
-  </div>
 </template>
 
 <script>
@@ -420,7 +411,6 @@ export default {
       restoringTransformation: false,
       rotationDegrees: { x: 0, y: 0, z: 0 },
       rotationInput: { x: "0", y: "0", z: "0" },
-      angleHud: { display: false, left: 0, top: 0 },
       selectedImage: undefined,
       selectedImageId: undefined,
       selectedImageScaleInput: "100%",
@@ -448,7 +438,6 @@ export default {
         if (vm != undefined) {
           vm.$refs.raycastCanvas.transformationResetDisabled = false;
           vm.$refs.raycastCanvas.updateRotationReadout();
-          vm.$refs.raycastCanvas.updateAngleHudPosition();
           vm.$refs.raycastCanvas.updateImagePresentation();
         }
 
@@ -569,36 +558,6 @@ export default {
         x: String(this.rotationDegrees.x),
         y: String(this.rotationDegrees.y),
         z: String(this.rotationDegrees.z),
-      };
-      this.updateAngleHudPosition();
-    },
-    updateAngleHudPosition() {
-      if (
-        !canvas ||
-        this.selectedTool !== "draw" ||
-        !this.visible ||
-        !this.transformationEnabled
-      ) {
-        this.angleHud.display = false;
-        return;
-      }
-
-      let position = new THREE.Vector3();
-      canvas.getWorldPosition(position);
-      position.project(camera);
-
-      this.angleHud = {
-        display: true,
-        left: THREE.MathUtils.clamp(
-          (position.x * 0.5 + 0.5) * window.innerWidth + 18,
-          8,
-          window.innerWidth - 132
-        ),
-        top: THREE.MathUtils.clamp(
-          (-position.y * 0.5 + 0.5) * window.innerHeight - 52,
-          8,
-          window.innerHeight - 88
-        ),
       };
     },
     commitRotationInput(axis) {
@@ -1203,20 +1162,17 @@ export default {
         controls.mode = "combined";
         renderer.render(scene, camera);
       }
-      this.updateAngleHudPosition();
     },
     toggleControls() {
       if (controls.visible === true) {
         this.transformationEnabled = false;
         controls.enabled = false;
         controls.visible = false;
-        this.updateAngleHudPosition();
         renderer.render(scene, camera);
       } else {
         this.transformationEnabled = true;
         controls.enabled = true;
         controls.visible = true;
-        this.updateAngleHudPosition();
         renderer.render(scene, camera);
       }
     },
@@ -1234,7 +1190,6 @@ export default {
         }
 
         canvas.visible = false;
-        this.updateAngleHudPosition();
         renderer.render(scene, camera);
       } else {
         this.visible = true;
@@ -1249,7 +1204,6 @@ export default {
         }
 
         canvas.visible = true;
-        this.updateAngleHudPosition();
 
         renderer.render(scene, camera);
       }
@@ -1411,7 +1365,6 @@ export default {
   mounted() {
     canvasComponent = this;
     this.setCanvasShape(this.shape);
-    this.updateAngleHudPosition();
   },
 };
 </script>
@@ -1642,35 +1595,9 @@ export default {
   outline: none;
 }
 
-.angle-gizmo-readout {
-  position: absolute;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 108px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.94);
-  color: #1c1c1e;
-  font-size: 0.78rem;
-  font-weight: 900;
-  line-height: 1.15;
-  pointer-events: none;
-  filter: drop-shadow(0px 0px 18px rgba(0, 0, 0, 0.12));
-}
 
-.angle-gizmo-readout span:nth-child(1) {
-  color: #ff3b30;
-}
 
-.angle-gizmo-readout span:nth-child(2) {
-  color: #2f9e44;
-}
 
-.angle-gizmo-readout span:nth-child(3) {
-  color: #1c7ed6;
-}
 
 .active {
   box-shadow: inset 0px 0px 0px 1px #fff;
