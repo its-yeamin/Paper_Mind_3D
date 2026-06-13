@@ -456,12 +456,16 @@ let draw = {
         this.l.start(mirrorOn);
     },
     onMove: function (x, y, z, force, unproject) {
+        if (!this.l) return;
         this.l.move(x, y, z, force, unproject);
     },
     onEnd: function (mirrorOn) {
+        if (!this.l) return;
         this.l.end(mirrorOn);
+        this.l = undefined;
     },
     onEnd_internal: function (mirrorOn, render) {
+        if (!this.l) return;
         this.l.end_internal(mirrorOn, render);
     },
     onCancel: function () {

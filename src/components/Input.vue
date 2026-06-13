@@ -224,6 +224,14 @@ export default {
         scale.distanceTo(savedScale) < 0.01
       );
     },
+    isTransformHandleHit: function (raycaster) {
+      if (controls.enabled !== true || controls.visible !== true) return false;
+
+      let picker = controls._gizmo?.picker?.[controls.mode];
+      if (!picker) return false;
+
+      return raycaster.intersectObjects(picker.children, true).length > 0;
+    },
     updateMouseCoordinates: function (event) {
       if (event.pointerType === "pen") {
         this.mouse.tx = (event.clientX / window.innerWidth) * 2 - 1;
@@ -279,6 +287,7 @@ export default {
         this.mouse.down = true;
         this.mouse.eventCancelled = false;
         this.mouse.multiTouched = false;
+        this.movingCanvas = false;
         let raycaster;
         switch (this.selectedTool) {
           case "draw":
@@ -287,11 +296,7 @@ export default {
               new THREE.Vector2(this.mouse.tx, this.mouse.ty),
               camera
             );
-            if (
-              controls.enabled === true &&
-              controls.visible === true &&
-              raycaster.intersectObjects(controls.children, true).length > 0
-            ) {
+            if (this.isTransformHandleHit(raycaster)) {
               this.movingCanvas = true;
               return;
             } else {
