@@ -4,12 +4,12 @@
     v-bind:style="[
       location == 'above'
         ? {
-            top: 'calc(' + posTop + 'px - 100px',
-            left: 'calc(' + posLeft + 'px - 110px)',
+            top: 'calc(' + posTop + 'px - 88px',
+            left: 'calc(' + posLeft + 'px - 76px)',
           }
         : {
-            top: 'calc(' + posTop + 'px + 100px',
-            left: 'calc(' + posLeft + 'px - 110px)',
+            top: 'calc(' + posTop + 'px + 88px',
+            left: 'calc(' + posLeft + 'px - 76px)',
           },
     ]"
     v-bind:class="{ hide: !display }"
@@ -23,7 +23,9 @@
           value="translate"
           v-model="selectedTransformation"
           checked
-        /><label for="translate"> Move</label>
+        /><label for="translate" title="Move"
+          ><img src="@/assets/icons/translate.svg" alt="Move"
+        /></label>
         <div></div>
       </span>
       <span>
@@ -33,7 +35,7 @@
           name="transformations"
           value="rotate"
           v-model="selectedTransformation"
-        /><label for="rotate"> Rotate</label>
+        /><label for="rotate" title="Rotate">R</label>
         <div></div>
       </span>
       <span>
@@ -43,13 +45,19 @@
           name="transformations"
           value="scale"
           v-model="selectedTransformation"
-        /><label for="scale"> Scale</label>
+        /><label for="scale" title="Scale"
+          ><img src="@/assets/icons/scale.svg" alt="Scale"
+        /></label>
         <div></div>
       </span>
     </span>
 
-    <button v-bind:class="{ hide: selectedTool == 'model' }" @click="duplicate">
-      Duplicate
+    <button
+      v-bind:class="{ hide: selectedTool == 'model' }"
+      @click="duplicate"
+      title="Duplicate"
+    >
+      D
     </button>
   </div>
 </template>
@@ -130,24 +138,56 @@ export default {
 
 <style scoped>
 .transform-toolbar {
-  padding: 8px;
+  padding: 5px;
   position: absolute;
   z-index: 999;
-  background-color: black;
-  color: white;
-  width: 220px;
-  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.96);
+  color: #1c1c1e;
+  width: 152px;
+  border-radius: 18px;
   align-content: center;
   display: flex;
   flex-direction: row;
+  gap: 4px;
+  filter: drop-shadow(0px 4px 14px rgba(0, 0, 0, 0.12));
 }
 
 .transform-toolbar > span {
   display: flex;
+  gap: 4px;
 }
 
 button {
-  width: 100%;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 16px;
+  background-color: transparent;
+  color: #1c1c1e;
+  font-weight: 900;
+  padding: 0;
+}
+
+label {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  color: #1c1c1e;
+  font-size: 0.85em;
+  font-weight: 900;
+}
+
+label img {
+  width: 18px;
+  height: 18px;
+}
+
+input[type="radio"]:checked + label,
+button:hover,
+button:focus {
+  background-color: #ffe8b3;
 }
 
 .hide {

@@ -48,8 +48,9 @@
     class="grid-guide-toggle"
     v-bind:class="[gridGuideVisible ? 'active' : '']"
     @click="toggleGridGuide"
+    title="3D grid guide"
   >
-    3D Grid
+    Grid
   </button>
   <!-- <div>
     <a id="ar" rel="ar"><img src="@/assets/icons/AR.png" /></a>
@@ -867,14 +868,14 @@ a:hover {
   z-index: 2;
   right: 12px;
   top: 200px;
-  height: 36px;
+  height: 32px;
   border: none;
-  border-radius: 8px;
+  border-radius: 16px;
   background-color: #fff;
   color: #1c1c1e;
-  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
-  font-size: 0.8em;
-  padding: 0 12px;
+  filter: drop-shadow(0px 4px 14px rgba(0, 0, 0, 0.1));
+  font-size: 0.72em;
+  padding: 0 10px;
 }
 
 .grid-guide-toggle.active {

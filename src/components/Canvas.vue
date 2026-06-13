@@ -12,76 +12,69 @@
       id="canvasShapeDropdown"
       @click="toggleShapeSelectionVisibility()"
       v-bind:class="[!visible ? 'disabled' : '']"
+      title="Canvas shape"
     >
       <span class="icon-and-label" v-if="shape === 'plane'"
         ><img
           src="@/assets/icons/Canvas-Plane.svg"
           alt="Plane shape selected"
-        />Plane</span
+        /></span
       >
       <span class="icon-and-label" v-if="shape === 'cube'"
         ><img
           src="@/assets/icons/Canvas-Cube.svg"
           alt="Cube shape selected"
-        />Cube</span
+        /></span
       >
       <span class="icon-and-label" v-if="shape === 'cylinder'"
         ><img
           src="@/assets/icons/Canvas-Cylinder.svg"
           alt="Cylinder shape selected"
-        />Cylinder</span
+        /></span
       >
       <span class="icon-and-label" v-if="shape === 'sphere'"
         ><img
           src="@/assets/icons/Canvas-Sphere.svg"
           alt="Sphere shape selected"
-        />Sphere</span
+        /></span
       >
       <span class="icon-and-label" v-if="shape === 'head'">
         <img
           src="@/assets/icons/Canvas-Head.svg"
           alt="Head shape selected"
-        />Head</span
+        /></span
       >
-      <img
-        src="@/assets/icons/Dropdown.svg"
-        v-bind:style="[
-          shapeSelectionVisibility
-            ? { transform: 'rotate(180deg)' }
-            : { transform: 'rotate(0deg)' },
-        ]"
-        style="margin-right: 10px"
-        alt="Click to show options"
-      />
     </span>
     <span
       class="canvas-button transform-mode"
       @click="toggleTransformMode()"
       v-bind:class="[!visible ? 'disabled' : '']"
       v-if="!shapeSelectionVisibility"
+      title="Transform mode"
     >
       <span
         class="icon-and-label"
         v-bind:class="[mode === 'combined' ? 'active' : '']"
+        v-if="mode === 'combined'"
       >
-        <img src="@/assets/icons/translate.svg" alt="Switch to scale" />
-        <span v-if="mode === 'combined'">Move</span>
+        <img src="@/assets/icons/translate.svg" alt="Move mode" />
       </span>
       <span
         class="icon-and-label"
         v-bind:class="[mode === 'scale' ? 'active' : '']"
+        v-if="mode === 'scale'"
       >
         <img
           src="@/assets/icons/scale.svg"
-          alt="Switch to move and rotate"
+          alt="Scale mode"
         />
-        <span v-if="mode === 'scale'">Scale</span>
       </span>
       <span
         class="icon-and-label"
         v-bind:class="[mode === 'rotate' ? 'active' : '']"
+        v-if="mode === 'rotate'"
       >
-        <span v-if="mode === 'rotate'">Rotate</span>
+        <span class="mode-letter">R</span>
       </span
       ></span
     >
@@ -93,13 +86,14 @@
         !transformationEnabled ? 'active' : '',
       ]"
       v-if="!shapeSelectionVisibility"
+      title="Toggle plane controls"
       ><span
         v-bind:class="[transformationEnabled ? '' : 'hidden']"
         class="icon-and-label"
         ><img
           src="@/assets/icons/lockControls.svg"
           alt="Hide the canvas controls"
-        />Unlocked</span
+        /></span
       >
       <span
         v-bind:class="[!transformationEnabled ? '' : 'hidden']"
@@ -107,7 +101,7 @@
         ><img
           src="@/assets/icons/unlockControls.svg"
           alt="Show the canvas controls"
-        />Locked</span
+        /></span
       >
     </span>
     <span
@@ -115,18 +109,19 @@
       @click="toggleVisibility()"
       v-if="!shapeSelectionVisibility"
       v-bind:class="[!visible ? 'active' : '']"
+      title="Show or hide plane"
     >
       <span v-if="visible" class="icon-and-label"
         ><img
           src="@/assets/icons/hideCanvas.svg"
           alt="Hide the canvas controls"
-        />Visible</span
+        /></span
       >
       <span v-bind:class="[!visible ? '' : 'hidden']" class="icon-and-label"
         ><img
           src="@/assets/icons/showCanvas.svg"
           alt="Show the canvas controls"
-        />Hidden</span
+        /></span
       ></span
     >
     <span
@@ -134,12 +129,12 @@
       @click="toggleSnap()"
       v-if="!shapeSelectionVisibility"
       v-bind:class="[!visible ? 'disabled' : '', snap ? 'active' : '']"
+      title="Snap"
       ><span v-bind:class="[!snap ? '' : 'hidden']" class="icon-and-label"
-        ><img src="@/assets/icons/snapOff.svg" alt="Turn off snap" />Snap
-        off</span
+        ><img src="@/assets/icons/snapOff.svg" alt="Turn off snap" /></span
       >
       <span v-bind:class="[snap ? '' : 'hidden']" class="icon-and-label">
-        <img src="@/assets/icons/snapOn.svg" alt="Turn on snap" />Snap on</span
+        <img src="@/assets/icons/snapOn.svg" alt="Turn on snap" /></span
       ></span
     >
     <div
@@ -151,17 +146,28 @@
         v-bind:class="[transformationResetDisabled ? 'disabled ' : '']"
         class="canvas-button"
         @click="resetTransformation()"
+        title="Reset plane to home"
       >
         <img
           src="@/assets/icons/reset.svg"
           alt="Reset canvas position, rotation and scale"
         />
       </span>
-      <button class="home-button" type="button" @click="setHomeFromCanvas">
-        Set Home
+      <button
+        class="home-button"
+        type="button"
+        @click="setHomeFromCanvas"
+        title="Set current plane as home"
+      >
+        Home
       </button>
-      <button class="home-button" type="button" @click="restoreDefaultHome">
-        Default
+      <button
+        class="home-button"
+        type="button"
+        @click="restoreDefaultHome"
+        title="Restore default home"
+      >
+        0
       </button>
     </div>
     <span
@@ -169,8 +175,13 @@
       v-if="!shapeSelectionVisibility"
       v-bind:class="[!visible ? 'disabled' : '']"
     >
-      <button class="image-import-button" type="button" @click="importImage()">
-        Image
+      <button
+        class="image-import-button"
+        type="button"
+        @click="importImage()"
+        title="Import image"
+      >
+        Img
       </button>
       <span class="image-scale-row">
         <button
@@ -1282,11 +1293,11 @@ export default {
   font-weight: 900;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 #canvasShapeDropdown {
-  max-width: 140px;
+  max-width: 36px;
 }
 
 .canvasShapeSelection {
@@ -1295,13 +1306,13 @@ export default {
   white-space: discard;
   display: flex;
   flex-direction: column;
-  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
-  border-radius: 8px;
+  filter: drop-shadow(0px 4px 14px rgba(0, 0, 0, 0.1));
+  border-radius: 6px;
   overflow: hidden;
   position: absolute;
   z-index: 10;
-  top: calc(44px + 8px);
-  width: 60px;
+  top: calc(36px + 6px);
+  width: 36px;
 }
 
 .canvasShapeSelection > span > label {
@@ -1320,9 +1331,9 @@ export default {
 }
 
 .reset-canvas {
-  height: 44px;
-  width: 44px;
-  border-radius: 22px;
+  height: 36px;
+  width: 36px;
+  border-radius: 18px;
   background-color: rgba(255, 255, 255, 1);
   font-size: 2em;
   line-height: 1em;
@@ -1332,13 +1343,13 @@ export default {
   align-content: center;
   text-align: center;
   z-index: 2;
-  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
+  filter: drop-shadow(0px 4px 14px rgba(0, 0, 0, 0.1));
 }
 
 .canvas-button {
-  height: 44px;
-  /* max-width: 44px; */
-  border-radius: 22px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
   background-color: rgba(255, 255, 255, 1);
   font-size: 2em;
   line-height: 1em;
@@ -1347,45 +1358,55 @@ export default {
   align-content: center;
   text-align: center;
   z-index: 2;
-  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
+  filter: drop-shadow(0px 4px 14px rgba(0, 0, 0, 0.1));
   display: flex;
   align-items: center;
-  width: fit-content;
 }
 
 .icon-and-label {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 4px;
   font-size: 0.5em;
-  border-radius: 22px;
+  border-radius: 18px;
   color: #1c1c1e;
-  padding: 0px 12px 0px 4px;
+  justify-content: center;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .transform-mode {
-  padding: 0px 2px;
+  padding: 0;
+}
+
+.mode-letter {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #1c1c1e;
+  font-size: 0.58em;
 }
 
 .center-row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
   align-self: flex-start;
 }
 
 .home-button {
-  min-width: 76px;
-  height: 44px;
+  min-width: 36px;
+  height: 36px;
   border: 0;
-  border-radius: 22px;
+  border-radius: 18px;
   background-color: #ffffff;
   color: #1c1c1e;
-  font-size: 0.72em;
+  font-size: 0.6em;
   font-weight: 900;
-  padding: 0 12px;
-  filter: drop-shadow(0px 0px 24px rgba(0, 0, 0, 0.08));
+  padding: 0 8px;
+  filter: drop-shadow(0px 4px 14px rgba(0, 0, 0, 0.1));
 }
 
 .home-button:hover,
@@ -1395,32 +1416,33 @@ export default {
 
 .image-tools {
   height: auto;
-  border-radius: 8px;
-  gap: 4px;
-  padding: 6px 8px;
+  width: 76px;
+  border-radius: 6px;
+  gap: 3px;
+  padding: 5px;
   flex-direction: column;
   align-items: center;
   align-self: flex-start;
 }
 
 .image-tools button {
-  height: 24px;
+  height: 22px;
   border: 0;
   border-radius: 4px;
   background-color: transparent;
   color: #1c1c1e;
-  font-size: 0.38em;
+  font-size: 0.34em;
   font-weight: 900;
   padding: 0 6px;
 }
 
 .image-import-button {
-  width: 82px;
+  width: 66px;
 }
 
 .image-scale-row {
   display: grid;
-  grid-template-columns: 24px 42px 24px;
+  grid-template-columns: 22px 34px 22px;
   align-items: center;
   overflow: hidden;
   border-radius: 4px;
@@ -1428,13 +1450,13 @@ export default {
 
 .image-scale-row input {
   min-width: 0;
-  width: 42px;
-  height: 24px;
+  width: 34px;
+  height: 22px;
   border: 0;
   border-left: 1px solid rgba(0, 0, 0, 0.08);
   border-right: 1px solid rgba(0, 0, 0, 0.08);
   color: #1c1c1e;
-  font-size: 0.38em;
+  font-size: 0.34em;
   font-weight: 900;
   text-align: center;
   padding: 0 2px;
@@ -1461,8 +1483,8 @@ export default {
 
 label {
   display: flex;
-  width: 60px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   align-content: center;
   justify-content: center;
   margin: 0px;
@@ -1489,14 +1511,14 @@ label {
   }
 
   .icon-and-label {
-    max-width: 32px;
+    max-width: 36px;
     overflow: hidden;
   }
 
   .image-tools {
-    width: 94px;
+    width: 76px;
     height: auto;
-    padding: 6px 8px;
+    padding: 5px;
   }
 }
 </style>
