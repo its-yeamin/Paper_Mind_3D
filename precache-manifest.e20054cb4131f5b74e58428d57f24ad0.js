@@ -4,8 +4,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/Paper_Mind_3D/asaro.glb"
   },
   {
-    "revision": "8f765049e28a1921d554",
-    "url": "/Paper_Mind_3D/css/app.f1367a7a.css"
+    "revision": "94ba4985c3451ef518ab",
+    "url": "/Paper_Mind_3D/css/app.c523d744.css"
   },
   {
     "revision": "2baf27e1f02dc0dc756495e2f1645f24",
@@ -108,12 +108,12 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/Paper_Mind_3D/img/watercolor.jpg"
   },
   {
-    "revision": "8c84146a192ab4d1e84f28c675bf351b",
+    "revision": "cb6303ee47285c20f1ecb55e265fbf20",
     "url": "/Paper_Mind_3D/index.html"
   },
   {
-    "revision": "8f765049e28a1921d554",
-    "url": "/Paper_Mind_3D/js/app.aa06f11d.js"
+    "revision": "94ba4985c3451ef518ab",
+    "url": "/Paper_Mind_3D/js/app.9895e7a6.js"
   },
   {
     "revision": "93f266f12eeec9df21f0",
