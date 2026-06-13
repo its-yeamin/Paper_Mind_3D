@@ -29,10 +29,10 @@
       <button
         class="camera-zoom-button"
         type="button"
-        aria-label="Zoom out"
-        @click.stop="stepZoom(-25)"
+        aria-label="Zoom in"
+        @click.stop="stepZoom(25)"
       >
-        -
+        +
       </button>
       <input
         class="camera-zoom-input"
@@ -46,10 +46,10 @@
       <button
         class="camera-zoom-button"
         type="button"
-        aria-label="Zoom in"
-        @click.stop="stepZoom(25)"
+        aria-label="Zoom out"
+        @click.stop="stepZoom(-25)"
       >
-        +
+        -
       </button>
     </div>
   </div>
@@ -433,12 +433,12 @@ export default {
   position: absolute;
   top: 152px;
   right: 0;
-  width: 132px;
-  height: 36px;
+  width: 44px;
+  height: 112px;
   border-radius: 6px;
   background-color: rgba(255, 255, 255, 1);
   display: grid;
-  grid-template-columns: 36px 1fr 36px;
+  grid-template-rows: 34px 44px 34px;
   align-items: center;
   z-index: 4;
   overflow: hidden;
@@ -446,7 +446,8 @@ export default {
 }
 
 .camera-zoom-button {
-  height: 36px;
+  width: 44px;
+  height: 34px;
   border: 0;
   background-color: transparent;
   color: #1c1c1e;
@@ -458,10 +459,11 @@ export default {
 
 .camera-zoom-input {
   min-width: 0;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 0;
-  border-left: 1px solid rgba(0, 0, 0, 0.08);
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   color: #1c1c1e;
   font-size: 13px;
   font-weight: 700;
