@@ -867,7 +867,7 @@ a:hover {
   position: absolute;
   z-index: 2;
   right: 12px;
-  top: 200px;
+  top: 274px;
   height: 32px;
   border: none;
   border-radius: 16px;
