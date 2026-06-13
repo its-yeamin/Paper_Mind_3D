@@ -159,7 +159,7 @@
         @click="setHomeFromCanvas"
         title="Set current plane as home"
       >
-        Home
+        Set
       </button>
       <button
         class="home-button"
@@ -175,21 +175,21 @@
       v-if="!shapeSelectionVisibility"
       v-bind:class="[!visible ? 'disabled' : '']"
     >
-      <button
-        class="image-import-button"
-        type="button"
-        @click="importImage()"
-        title="Import image"
-      >
-        Img
-      </button>
       <span class="image-scale-row">
         <button
           type="button"
-          @click="stepSelectedImageScale(-10)"
+          @click="stepSelectedImageScale(10)"
           v-bind:disabled="!selectedImageId"
         >
-          -
+          +
+        </button>
+        <button
+          class="image-import-button"
+          type="button"
+          @click="importImage()"
+          title="Import image"
+        >
+          Img
         </button>
         <input
           v-model="selectedImageScaleInput"
@@ -201,10 +201,10 @@
         />
         <button
           type="button"
-          @click="stepSelectedImageScale(10)"
+          @click="stepSelectedImageScale(-10)"
           v-bind:disabled="!selectedImageId"
         >
-          +
+          -
         </button>
       </span>
     </span>
@@ -215,8 +215,8 @@
       title="Plane rotation"
     >
       <label>
-        X
-        <button type="button" @click="stepRotation('x', -5)">-</button>
+        <span>X</span>
+        <button type="button" @click="stepRotation('x', 5)">+</button>
         <input
           v-model="rotationInput.x"
           inputmode="numeric"
@@ -224,11 +224,11 @@
           @keydown.enter="commitRotationInput('x')"
           @focus="$event.target.select()"
         />
-        <button type="button" @click="stepRotation('x', 5)">+</button>
+        <button type="button" @click="stepRotation('x', -5)">-</button>
       </label>
       <label>
-        Y
-        <button type="button" @click="stepRotation('y', -5)">-</button>
+        <span>Y</span>
+        <button type="button" @click="stepRotation('y', 5)">+</button>
         <input
           v-model="rotationInput.y"
           inputmode="numeric"
@@ -236,11 +236,11 @@
           @keydown.enter="commitRotationInput('y')"
           @focus="$event.target.select()"
         />
-        <button type="button" @click="stepRotation('y', 5)">+</button>
+        <button type="button" @click="stepRotation('y', -5)">-</button>
       </label>
       <label>
-        Z
-        <button type="button" @click="stepRotation('z', -5)">-</button>
+        <span>Z</span>
+        <button type="button" @click="stepRotation('z', 5)">+</button>
         <input
           v-model="rotationInput.z"
           inputmode="numeric"
@@ -248,7 +248,7 @@
           @keydown.enter="commitRotationInput('z')"
           @focus="$event.target.select()"
         />
-        <button type="button" @click="stepRotation('z', 5)">+</button>
+        <button type="button" @click="stepRotation('z', -5)">-</button>
       </label>
     </span>
     <!-- <span
@@ -1487,12 +1487,14 @@ export default {
 
 .center-row {
   display: flex;
+  flex-direction: column;
   gap: 4px;
   align-items: center;
   align-self: flex-start;
 }
 
 .home-button {
+  width: 36px;
   min-width: 36px;
   height: 36px;
   border: 0;
@@ -1512,7 +1514,7 @@ export default {
 
 .image-tools {
   height: auto;
-  width: 76px;
+  width: 36px;
   border-radius: 6px;
   gap: 3px;
   padding: 5px;
@@ -1533,20 +1535,21 @@ export default {
 }
 
 .image-import-button {
-  width: 66px;
+  width: 30px;
 }
 
 .image-scale-row {
-  display: grid;
-  grid-template-columns: 22px 34px 22px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   overflow: hidden;
   border-radius: 4px;
+  gap: 2px;
 }
 
 .image-scale-row input {
   min-width: 0;
-  width: 34px;
+  width: 30px;
   height: 22px;
   border: 0;
   border-left: 1px solid rgba(0, 0, 0, 0.08);
@@ -1569,22 +1572,23 @@ export default {
 }
 
 .rotation-readout {
-  width: 88px;
+  width: auto;
   height: auto;
   border-radius: 6px;
   gap: 3px;
   padding: 5px;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   color: #1c1c1e;
 }
 
 .rotation-readout label {
-  width: 100%;
-  height: 22px;
+  width: 36px;
+  height: auto;
   display: grid;
-  grid-template-columns: 12px 20px 1fr 20px;
+  grid-template-columns: 1fr;
   align-items: center;
+  justify-items: center;
   gap: 3px;
   color: #1c1c1e;
   font-size: 0.34em;
@@ -1592,7 +1596,7 @@ export default {
 }
 
 .rotation-readout button {
-  width: 20px;
+  width: 28px;
   height: 20px;
   border: 0;
   border-radius: 4px;
@@ -1606,7 +1610,7 @@ export default {
 
 .rotation-readout input {
   min-width: 0;
-  width: 100%;
+  width: 28px;
   height: 20px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 4px;
@@ -1668,13 +1672,13 @@ label {
   }
 
   .image-tools {
-    width: 76px;
+    width: 36px;
     height: auto;
     padding: 5px;
   }
 
   .rotation-readout {
-    width: 88px;
+    width: auto;
   }
 }
 </style>
