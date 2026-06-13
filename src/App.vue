@@ -293,6 +293,9 @@ export default {
             select.s.helper.update();
           }
         }
+        if (this.$.refs.raycastCanvas?.updateAngleHudPosition) {
+          this.$.refs.raycastCanvas.updateAngleHudPosition();
+        }
       });
 
       cameraControls.addEventListener("sleep", () => {

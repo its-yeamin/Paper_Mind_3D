@@ -288,16 +288,9 @@ export default {
               camera
             );
             if (
-              (controls.mode === "combined" &&
-                raycaster.intersectObjects(
-                  controls.children[0].children[10].children
-                )[0] !== undefined &&
-                controls.enabled === true) ||
-              (controls.mode === "scale" &&
-                raycaster.intersectObjects(
-                  controls.children[0].children[5].children
-                )[0] !== undefined &&
-                controls.enabled === true)
+              controls.enabled === true &&
+              controls.visible === true &&
+              raycaster.intersectObjects(controls.children, true).length > 0
             ) {
               this.movingCanvas = true;
               return;
