@@ -4,8 +4,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/Paper_Mind_3D/asaro.glb"
   },
   {
-    "revision": "d381af0a19fe50ec4492",
-    "url": "/Paper_Mind_3D/css/app.df4b2452.css"
+    "revision": "3fbce1327fd66ba86b4e",
+    "url": "/Paper_Mind_3D/css/app.0ee050fa.css"
   },
   {
     "revision": "2baf27e1f02dc0dc756495e2f1645f24",
@@ -104,16 +104,16 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/Paper_Mind_3D/img/watercolor.jpg"
   },
   {
-    "revision": "7e7f639360979ad20c6b66da7ec28938",
+    "revision": "7e84688643e6bc26082295eef4ea408f",
     "url": "/Paper_Mind_3D/index.html"
   },
   {
-    "revision": "d381af0a19fe50ec4492",
-    "url": "/Paper_Mind_3D/js/app.b2f8545a.js"
+    "revision": "3fbce1327fd66ba86b4e",
+    "url": "/Paper_Mind_3D/js/app.9e228cff.js"
   },
   {
-    "revision": "93f266f12eeec9df21f0",
-    "url": "/Paper_Mind_3D/js/chunk-vendors.54bf7c68.js"
+    "revision": "b99755516fe1a689fa52",
+    "url": "/Paper_Mind_3D/js/chunk-vendors.f99e79ac.js"
   },
   {
     "revision": "d0eacf010e76fbd362c3a14c876d77ab",
