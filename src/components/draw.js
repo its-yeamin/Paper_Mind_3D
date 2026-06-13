@@ -443,7 +443,6 @@ let draw = {
             mirror.eraseMirrorOf(this.mesh);
             this.mesh.material.dispose();
             draw.l = undefined;
-            draw.l = new draw.draw();
             drawingScene.clear();
             renderer.render(drawingScene, camera);
             renderer.autoClear = true;

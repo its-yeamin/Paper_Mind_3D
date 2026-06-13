@@ -303,6 +303,7 @@ let select = {
                     select.s.helper.update();
 
                     renderer.render(scene, camera);
+                    window.dispatchEvent(new CustomEvent("penzil-project-change"));
                 })
                 this.helper = new THREE.BoxHelper(
                     selection[0],
@@ -484,6 +485,7 @@ let select = {
                     select.s.helper.update();
 
                     renderer.render(scene, camera);
+                    window.dispatchEvent(new CustomEvent("penzil-project-change"));
                 })
                 scene.add(this.controls);
                 this.helper = new THREE.BoxHelper(
@@ -657,6 +659,7 @@ let select = {
 
             this.undoRedoSelection = new Array();
             renderer.render(scene, camera)
+            window.dispatchEvent(new CustomEvent("penzil-project-change"));
 
             undoManager.add({
                 undo: function () {

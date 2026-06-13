@@ -461,6 +461,11 @@ export default {
           controls.visible = true;
           renderer.render(scene, camera);
         }
+        this.mouse.down = false;
+        this.mouse.multiTouched = false;
+        this.mouse.eventCancelled = false;
+        this.movingCanvas = false;
+        this.mouse.distance = 0;
         return;
       } else {
         switch (this.selectedTool) {

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { cameraHomeTarget, scene, renderer, camera } from "../App.vue";
 import { draw } from "./draw.js";
 import { createImagePlane, disposeImagePlane } from "./imagePlane.js";
-import { applyCanvasHomeState, getCanvasHomeState } from "./Canvas.vue";
+import { applyCanvasHomeState, canvas, getCanvasHomeState } from "./Canvas.vue";
 
 const DB_NAME = "penzil-projects";
 const DB_VERSION = 1;
@@ -14,6 +14,45 @@ const RECENT_LIMIT = 3;
 let autosaveTimer;
 let restoringProject = false;
 let activeProjectId = window.localStorage.getItem(ACTIVE_PROJECT_KEY);
+
+function createDefaultHomeState() {
+  return {
+    current: {
+      position: new THREE.Vector3(0.001, 0.001, 0.001),
+      quaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
+      scale: new THREE.Vector3(1, 1, 1),
+    },
+    default: {
+      position: new THREE.Vector3(0.001, 0.001, 0.001),
+      quaternion: new THREE.Quaternion(0.001, 0.001, 0.001, 1),
+      scale: new THREE.Vector3(1, 1, 1),
+    },
+  };
+}
+
+function resetCanvasAndCameraHome() {
+  const home = createDefaultHomeState();
+  applyCanvasHomeState(home);
+
+  if (canvas) {
+    canvas.position.copy(home.current.position);
+    canvas.quaternion.copy(home.current.quaternion);
+    canvas.scale.copy(home.current.scale);
+    canvas.updateMatrixWorld(true);
+  }
+
+  cameraHomeTarget.copy(home.current.position);
+  window.dispatchEvent(
+    new CustomEvent("penzil-home-restore", {
+      detail: {
+        center: home.current.position.clone(),
+        resetView: true,
+      },
+    })
+  );
+
+  return home;
+}
 
 function createProjectId() {
   if (window.crypto?.randomUUID) {
@@ -68,6 +107,39 @@ function runTransaction(mode, callback) {
         };
       })
   );
+}
+
+function pruneStoredProjects() {
+  return openDatabase()
+    .then(
+      (db) =>
+        new Promise((resolve, reject) => {
+          const transaction = db.transaction(STORE_NAME, "readwrite");
+          const store = transaction.objectStore(STORE_NAME);
+          const request = store.getAll();
+
+          request.onsuccess = () => {
+            const records = (request.result || []).sort(
+              (a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
+            );
+            records.slice(RECENT_LIMIT).forEach((record) => {
+              store.delete(record.id);
+            });
+          };
+
+          transaction.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          transaction.onerror = () => {
+            db.close();
+            reject(transaction.error);
+          };
+        })
+    )
+    .catch((error) => {
+      console.warn("Could not prune old projects", error);
+    });
 }
 
 function serializeVector(vector) {
@@ -250,9 +322,13 @@ function createEmptyProject(name) {
 async function writeProjectToFileHandle(fileHandle, project) {
   if (!fileHandle?.createWritable) return;
 
-  const writable = await fileHandle.createWritable();
-  await writable.write(JSON.stringify(project));
-  await writable.close();
+  try {
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(project));
+    await writable.close();
+  } catch (error) {
+    console.warn("Could not write project file", error);
+  }
 }
 
 export function normalizeProject(data) {
@@ -405,7 +481,9 @@ export function saveCurrentProject() {
           project,
           fileHandle,
         })
-      ).then(() => writeProjectToFileHandle(fileHandle, project));
+      )
+        .then(() => writeProjectToFileHandle(fileHandle, project))
+        .then(() => pruneStoredProjects());
     })
     .catch((error) => {
       console.warn("Could not save project locally", error);
@@ -464,6 +542,9 @@ export function createNewProject(name, fileHandle) {
 
   restoringProject = true;
   clearProjectScene();
+  const home = resetCanvasAndCameraHome();
+  project.home = serializeHomeState(home);
+  project.cameraHome = serializeVector(home.current.position);
   renderer.render(scene, camera);
   restoringProject = false;
 
@@ -478,7 +559,9 @@ export function createNewProject(name, fileHandle) {
       project,
       fileHandle,
     })
-  );
+  )
+    .then(() => writeProjectToFileHandle(fileHandle, project))
+    .then(() => pruneStoredProjects());
 }
 
 export function createProjectFromBackup(data, name) {
@@ -500,7 +583,7 @@ export function createProjectFromBackup(data, name) {
       project,
       fileHandle: undefined,
     })
-  );
+  ).then(() => pruneStoredProjects());
 }
 
 export function openRecentProject(id) {
