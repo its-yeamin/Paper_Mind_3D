@@ -4,7 +4,7 @@
     class="canvasSettings"
     v-bind:style="[
       shapeSelectionVisibility === true ? 'z-index: 10' : '',
-      selectedTool != 'draw' && selectedTool != 'select' ? 'display: none' : '',
+      selectedTool != 'draw' ? 'display: none' : '',
     ]"
   >
     <span
@@ -170,17 +170,17 @@
         0
       </button>
       <button
-        class="home-button select-tool-button"
+        class="home-button stroke-plane-button"
         type="button"
-        @click="$emit('selected-tool', selectedTool === 'select' ? 'draw' : 'select')"
-        v-bind:title="selectedTool === 'select' ? 'Draw' : 'Select strokes'"
+        @click="$emit('toggle-stroke-plane-restore', !strokePlaneRestoreEnabled)"
+        v-bind:class="[strokePlaneRestoreEnabled ? 'active' : '']"
+        v-bind:title="
+          strokePlaneRestoreEnabled
+            ? 'Disable stroke plane restore'
+            : 'Enable stroke plane restore'
+        "
       >
-        <img
-          v-if="selectedTool !== 'select'"
-          src="@/assets/icons/Cursor.svg"
-          alt="Select strokes"
-        />
-        <img v-else src="@/assets/icons/draw.svg" alt="Draw" />
+        <img src="@/assets/icons/Cursor.svg" alt="Stroke plane restore" />
       </button>
     </div>
     <span
@@ -444,12 +444,13 @@ export default {
   props: {
     selectedShape: String,
     selectedTool: String,
+    strokePlaneRestoreEnabled: Boolean,
     mirror: [Boolean, String],
     mouse: Object,
   },
   emits: [
     "selected-canvas-shape",
-    "selected-tool",
+    "toggle-stroke-plane-restore",
     "set-tool-enabled",
     "set-camera-home",
   ],
@@ -1530,7 +1531,7 @@ export default {
   background-color: #ffe8b3;
 }
 
-.select-tool-button img {
+.stroke-plane-button img {
   width: 16px;
   height: 16px;
 }

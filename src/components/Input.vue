@@ -138,6 +138,7 @@ export default {
   props: {
     selectedTool: String,
     toolEnabled: Boolean,
+    strokePlaneRestoreEnabled: Boolean,
     mirror: [Boolean, String],
     stroke: [Object],
     fill: [Object],
@@ -331,6 +332,34 @@ export default {
                   raycaster.layers.set(0);
                 } else {
                   let canvasData = imageIntersection.object.userData.canvas;
+                  vm.$refs.raycastCanvas.setShapeAndMatrix(
+                    canvasData.shape,
+                    canvasData.position,
+                    canvasData.quaternion,
+                    canvasData.scale
+                  );
+                  this.mouse.down = false;
+                  this.mouse.eventCancelled = true;
+                  return;
+                }
+              }
+
+              if (this.strokePlaneRestoreEnabled) {
+                let strokeIntersection = raycaster
+                  .intersectObjects(scene.children, true)
+                  .find(
+                    (intersection) =>
+                      intersection.object.userData.canvas &&
+                      intersection.object.userData.kind !== "imagePlane"
+                  );
+
+                if (
+                  strokeIntersection &&
+                  !this.isCanvasAtSavedTransform(
+                    strokeIntersection.object.userData.canvas
+                  )
+                ) {
+                  let canvasData = strokeIntersection.object.userData.canvas;
                   vm.$refs.raycastCanvas.setShapeAndMatrix(
                     canvasData.shape,
                     canvasData.position,

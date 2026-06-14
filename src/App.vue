@@ -24,15 +24,17 @@
     :stroke="stroke"
     :fill="fill"
     :toolEnabled="toolEnabled"
+    :strokePlaneRestoreEnabled="strokePlaneRestoreEnabled"
   />
   <Canvas
     ref="raycastCanvas"
     @selected-canvas-shape="setSelectedCanvasShape"
-    @selected-tool="setSelectedTool"
+    @toggle-stroke-plane-restore="setStrokePlaneRestoreEnabled"
     @set-tool-enabled="setToolEnabled"
     @set-camera-home="setCameraHome"
     :selectedShape="canvasShape"
     :selectedTool="tool"
+    :strokePlaneRestoreEnabled="strokePlaneRestoreEnabled"
     :mirror="mirror"
     :mouse="mouse"
   />
@@ -155,6 +157,7 @@ export default {
       gridGuideVisible: false,
       projectStartVisible: true,
       recentProjects: [],
+      strokePlaneRestoreEnabled: false,
       touchGesture: {
         active: false,
         x: 0,
@@ -652,10 +655,6 @@ export default {
           controls.visible = false;
         }
         renderer.render(scene, camera);
-      } else if (this.tool === "select") {
-        canvas.visible = false;
-        controls.visible = false;
-        renderer.render(scene, camera);
       }
 
       this.toolHistory.push(val);
@@ -679,6 +678,9 @@ export default {
     },
     setToolEnabled: function (val) {
       this.toolEnabled = val;
+    },
+    setStrokePlaneRestoreEnabled: function (val) {
+      this.strokePlaneRestoreEnabled = val;
     },
     setMouseCoordinates: function (val) {
       this.mouse = val;
