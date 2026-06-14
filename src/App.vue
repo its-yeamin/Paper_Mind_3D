@@ -24,17 +24,17 @@
     :stroke="stroke"
     :fill="fill"
     :toolEnabled="toolEnabled"
-    :strokePlaneRestoreEnabled="strokePlaneRestoreEnabled"
+    :stroke-plane-restore-enabled="strokePlaneRestoreEnabled"
   />
   <Canvas
     ref="raycastCanvas"
     @selected-canvas-shape="setSelectedCanvasShape"
-    @toggle-stroke-plane-restore="setStrokePlaneRestoreEnabled"
+    @toggle-stroke-plane-restore="toggleStrokePlaneRestore"
     @set-tool-enabled="setToolEnabled"
     @set-camera-home="setCameraHome"
     :selectedShape="canvasShape"
     :selectedTool="tool"
-    :strokePlaneRestoreEnabled="strokePlaneRestoreEnabled"
+    :stroke-plane-restore-enabled="strokePlaneRestoreEnabled"
     :mirror="mirror"
     :mouse="mouse"
   />
@@ -679,8 +679,8 @@ export default {
     setToolEnabled: function (val) {
       this.toolEnabled = val;
     },
-    setStrokePlaneRestoreEnabled: function (val) {
-      this.strokePlaneRestoreEnabled = val;
+    toggleStrokePlaneRestore: function () {
+      this.strokePlaneRestoreEnabled = !this.strokePlaneRestoreEnabled;
     },
     setMouseCoordinates: function (val) {
       this.mouse = val;

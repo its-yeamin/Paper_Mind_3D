@@ -172,7 +172,7 @@
       <button
         class="home-button stroke-plane-button"
         type="button"
-        @click="$emit('toggle-stroke-plane-restore', !strokePlaneRestoreEnabled)"
+        @click="$emit('toggle-stroke-plane-restore')"
         v-bind:class="[strokePlaneRestoreEnabled ? 'active' : '']"
         v-bind:title="
           strokePlaneRestoreEnabled
