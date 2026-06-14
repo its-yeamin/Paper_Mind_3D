@@ -1536,6 +1536,11 @@ export default {
   height: 16px;
 }
 
+.stroke-plane-button.active {
+  background-color: #ffe8b3;
+  box-shadow: inset 0px 0px 0px 1px #fff;
+}
+
 .image-tools {
   height: auto;
   width: 36px;
