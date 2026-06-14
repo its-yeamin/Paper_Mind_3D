@@ -147,9 +147,20 @@ export default {
     isPenPointer: function (event) {
       return event.pointerType === "pen" && event.isPrimary !== false;
     },
+    isPenContact: function (event) {
+      if (!this.isPenPointer(event)) return false;
+
+      if (event.pressure !== undefined) {
+        return event.pressure > 0;
+      }
+
+      return event.buttons !== undefined
+        ? (event.buttons & 1) === 1
+        : event.button === 0;
+    },
     isPrimaryInputStart: function (event) {
       if (event.pointerType) {
-        return this.isPenPointer(event) && event.button === 0;
+        return this.isPenContact(event);
       }
 
       return (
@@ -160,7 +171,7 @@ export default {
     },
     isPrimaryInputMove: function (event) {
       if (event.pointerType) {
-        return this.isPenPointer(event) && this.mouse.down;
+        return this.isPenContact(event) && this.mouse.down;
       }
 
       return event.button == 0 || event.touches?.length == 1;
@@ -241,7 +252,7 @@ export default {
         this.mouse.force =
           event.pressure !== undefined && event.pressure > 0
             ? event.pressure
-            : 0.5;
+            : 0;
       } else if (event.touches) {
         this.mouse.tx =
           (event.changedTouches[0].pageX / window.innerWidth) * 2 - 1;
@@ -527,6 +538,10 @@ export default {
             this.onStart(event);
             break;
           case "pointermove":
+            if (this.mouse.down && !this.isPenContact(event)) {
+              this.onEnd(event);
+              break;
+            }
             this.onMove(event);
             break;
           case "pointerup":
