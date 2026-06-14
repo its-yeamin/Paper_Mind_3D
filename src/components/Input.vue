@@ -329,16 +329,24 @@ export default {
                     return;
                   }
                 } else {
-                  let canvasData = strokeIntersection.object.userData.canvas;
-                  vm.$refs.raycastCanvas.setShapeAndMatrix(
-                    canvasData.shape,
-                    canvasData.position,
-                    canvasData.quaternion,
-                    canvasData.scale
-                  );
-                  this.mouse.down = false;
-                  this.mouse.eventCancelled = true;
-                  return;
+                  if (
+                    this.isCanvasAtSavedTransform(
+                      strokeIntersection.object.userData.canvas
+                    )
+                  ) {
+                    raycaster.layers.set(0);
+                  } else {
+                    let canvasData = strokeIntersection.object.userData.canvas;
+                    vm.$refs.raycastCanvas.setShapeAndMatrix(
+                      canvasData.shape,
+                      canvasData.position,
+                      canvasData.quaternion,
+                      canvasData.scale
+                    );
+                    this.mouse.down = false;
+                    this.mouse.eventCancelled = true;
+                    return;
+                  }
                 }
               }
 
