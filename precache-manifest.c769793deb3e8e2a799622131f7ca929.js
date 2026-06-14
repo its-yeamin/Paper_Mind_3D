@@ -4,8 +4,8 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/Paper_Mind_3D/asaro.glb"
   },
   {
-    "revision": "8e5a80c67e7a6e888993",
-    "url": "/Paper_Mind_3D/css/app.bf436820.css"
+    "revision": "54b1c31701c63e211183",
+    "url": "/Paper_Mind_3D/css/app.3fbe91b0.css"
   },
   {
     "revision": "2baf27e1f02dc0dc756495e2f1645f24",
@@ -26,6 +26,10 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
     "revision": "b50acb480c5ccfa3499ec2a1722195bf",
     "url": "/Paper_Mind_3D/img/Canvas-Sphere.b50acb48.svg"
+  },
+  {
+    "revision": "eaafd940db9d0527d058fffadcdb163c",
+    "url": "/Paper_Mind_3D/img/Cursor.eaafd940.svg"
   },
   {
     "revision": "c0870bd8d10da7d6f2573821978028c3",
@@ -104,12 +108,12 @@ self.__precacheManifest = (self.__precacheManifest || []).concat([
     "url": "/Paper_Mind_3D/img/watercolor.jpg"
   },
   {
-    "revision": "0c8a7edd4fa1b919ea413c0b06aff296",
+    "revision": "bb68870ed7a26bec36547efdd3688948",
     "url": "/Paper_Mind_3D/index.html"
   },
   {
-    "revision": "8e5a80c67e7a6e888993",
-    "url": "/Paper_Mind_3D/js/app.dca141aa.js"
+    "revision": "54b1c31701c63e211183",
+    "url": "/Paper_Mind_3D/js/app.e9353c33.js"
   },
   {
     "revision": "b99755516fe1a689fa52",
