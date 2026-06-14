@@ -228,7 +228,7 @@ export default {
       cameraControls.touches.two = CameraControls.ACTION.TOUCH_ZOOM_ROTATE;
       cameraControls.touches.three = CameraControls.ACTION.TOUCH_DOLLY_TRUCK;
       cameraControls.maxZoom = 4000;
-      cameraControls.minZoom = 1.5;
+      cameraControls.minZoom = 0.45;
       cameraControls.enabled = true;
       main.addEventListener("touchstart", this.handleCanvasTouchStart, {
         capture: true,
@@ -695,7 +695,7 @@ export default {
       }
     },
     setCameraZoom: function (percent) {
-      let nextZoom = THREE.MathUtils.clamp((percent / 100) * 3, 1.5, 4000);
+      let nextZoom = THREE.MathUtils.clamp((percent / 100) * 3, 0.45, 4000);
       this.cameraZoomPercent = Math.round((nextZoom / 3) * 100);
       cameraControls.zoomTo(nextZoom, true);
     },

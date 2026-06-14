@@ -90,7 +90,7 @@ export default {
       return Math.round(value) + "%";
     },
     clampZoomPercent: function (value) {
-      return THREE.MathUtils.clamp(value, 50, 1000);
+      return THREE.MathUtils.clamp(value, 15, 1000);
     },
     setZoomPercent: function (value) {
       let percent = this.clampZoomPercent(value);
