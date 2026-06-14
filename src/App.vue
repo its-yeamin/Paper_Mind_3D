@@ -28,6 +28,7 @@
   <Canvas
     ref="raycastCanvas"
     @selected-canvas-shape="setSelectedCanvasShape"
+    @selected-tool="setSelectedTool"
     @set-tool-enabled="setToolEnabled"
     @set-camera-home="setCameraHome"
     :selectedShape="canvasShape"
@@ -650,6 +651,10 @@ export default {
         } else {
           controls.visible = false;
         }
+        renderer.render(scene, camera);
+      } else if (this.tool === "select") {
+        canvas.visible = false;
+        controls.visible = false;
         renderer.render(scene, camera);
       }
 

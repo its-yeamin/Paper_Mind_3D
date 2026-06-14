@@ -4,7 +4,7 @@
     class="canvasSettings"
     v-bind:style="[
       shapeSelectionVisibility === true ? 'z-index: 10' : '',
-      selectedTool != 'draw' ? 'display: none' : '',
+      selectedTool != 'draw' && selectedTool != 'select' ? 'display: none' : '',
     ]"
   >
     <span
@@ -168,6 +168,19 @@
         title="Restore default home"
       >
         0
+      </button>
+      <button
+        class="home-button select-tool-button"
+        type="button"
+        @click="$emit('selected-tool', selectedTool === 'select' ? 'draw' : 'select')"
+        v-bind:title="selectedTool === 'select' ? 'Draw' : 'Select strokes'"
+      >
+        <img
+          v-if="selectedTool !== 'select'"
+          src="@/assets/icons/Cursor.svg"
+          alt="Select strokes"
+        />
+        <img v-else src="@/assets/icons/draw.svg" alt="Draw" />
       </button>
     </div>
     <span
@@ -434,7 +447,12 @@ export default {
     mirror: [Boolean, String],
     mouse: Object,
   },
-  emits: ["selected-canvas-shape", "set-tool-enabled", "set-camera-home"],
+  emits: [
+    "selected-canvas-shape",
+    "selected-tool",
+    "set-tool-enabled",
+    "set-camera-home",
+  ],
   methods: {
     setUp() {
       const material = this.material;
@@ -1510,6 +1528,11 @@ export default {
 .home-button:hover,
 .home-button:focus {
   background-color: #ffe8b3;
+}
+
+.select-tool-button img {
+  width: 16px;
+  height: 16px;
 }
 
 .image-tools {
