@@ -313,51 +313,33 @@ export default {
             } else {
               raycaster.layers.set(1);
               raycaster.params.Line.threshold = 0.05;
-              let strokeIntersection = raycaster
+              let imageIntersection = raycaster
                 .intersectObjects(scene.children, true)
-                .find((intersection) => intersection.object.userData.canvas);
+                .find(
+                  (intersection) =>
+                    intersection.object.userData.kind === "imagePlane"
+                );
 
-              if (strokeIntersection) {
-                if (strokeIntersection.object.userData.kind === "imagePlane") {
-                  vm.$refs.raycastCanvas.selectImage(strokeIntersection.object);
+              if (imageIntersection) {
+                vm.$refs.raycastCanvas.selectImage(imageIntersection.object);
 
-                  if (
-                    this.isCanvasAtSavedTransform(
-                      strokeIntersection.object.userData.canvas
-                    )
-                  ) {
-                    raycaster.layers.set(0);
-                  } else {
-                    let canvasData = strokeIntersection.object.userData.canvas;
-                    vm.$refs.raycastCanvas.setShapeAndMatrix(
-                      canvasData.shape,
-                      canvasData.position,
-                      canvasData.quaternion,
-                      canvasData.scale
-                    );
-                    this.mouse.down = false;
-                    this.mouse.eventCancelled = true;
-                    return;
-                  }
+                if (
+                  this.isCanvasAtSavedTransform(
+                    imageIntersection.object.userData.canvas
+                  )
+                ) {
+                  raycaster.layers.set(0);
                 } else {
-                  if (
-                    this.isCanvasAtSavedTransform(
-                      strokeIntersection.object.userData.canvas
-                    )
-                  ) {
-                    raycaster.layers.set(0);
-                  } else {
-                    let canvasData = strokeIntersection.object.userData.canvas;
-                    vm.$refs.raycastCanvas.setShapeAndMatrix(
-                      canvasData.shape,
-                      canvasData.position,
-                      canvasData.quaternion,
-                      canvasData.scale
-                    );
-                    this.mouse.down = false;
-                    this.mouse.eventCancelled = true;
-                    return;
-                  }
+                  let canvasData = imageIntersection.object.userData.canvas;
+                  vm.$refs.raycastCanvas.setShapeAndMatrix(
+                    canvasData.shape,
+                    canvasData.position,
+                    canvasData.quaternion,
+                    canvasData.scale
+                  );
+                  this.mouse.down = false;
+                  this.mouse.eventCancelled = true;
+                  return;
                 }
               }
 
