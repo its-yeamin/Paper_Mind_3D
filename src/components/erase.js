@@ -5,6 +5,7 @@ import { MeshLineMaterial } from "meshline";
 import { draw } from "./draw.js";
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue"
 import { createImagePlane, disposeImagePlane } from "./imagePlane.js";
+import { deleteSweepMeshesForStroke } from "./sweepShape.js";
 
 let erase = {
     e: undefined,
@@ -291,6 +292,7 @@ let erase = {
         let matrix = object.matrix;
 
         scene.remove(object);
+        deleteSweepMeshesForStroke(uuid);
         mirror.eraseMirrorOf(object);
         object.material.dispose();
 

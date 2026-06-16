@@ -12,6 +12,7 @@ import { canvas, currentShape } from "./Canvas.vue";
 import { erase } from "./erase.js"
 import { mirror } from "./mirror.js"
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue"
+import { registerSweepStroke } from "./sweepShape.js"
 
 // let pencil = new THREE.TextureLoader().load(
 //     "/pencilVectorWide.png"
@@ -235,6 +236,7 @@ let draw = {
             });
 
             undoRedoComponent.$.ctx.updateUi();
+            registerSweepStroke(this.mesh);
             window.dispatchEvent(new CustomEvent("penzil-project-change"));
 
         }
@@ -526,6 +528,7 @@ let draw = {
             );
         }
         scene.add(this.l.mesh)
+        registerSweepStroke(this.l.mesh);
         if (render === true) { renderer.render(scene, camera) }
     }
 }

@@ -44,6 +44,9 @@
           alt="Head shape selected"
         /></span
       >
+      <span class="icon-and-label shape-text-icon" v-if="shape === 'sweep-shape'"
+        >3D</span
+      >
     </span>
     <span
       class="canvas-button transform-mode"
@@ -339,6 +342,17 @@
             alt="Set the 3d canvas shape to head"
         /></label>
       </span>
+      <span @click="setCanvasShape('sweep-shape')">
+        <input
+          type="radio"
+          id="shapeSweep"
+          name="shape"
+          value="sweep-shape"
+          v-model="shape"
+        /><label for="shapeSweep" title="3D stroke shape guide">
+          <span class="shape-text-icon">3D</span>
+        </label>
+      </span>
     </div>
   </div>
   <div
@@ -358,6 +372,7 @@ import { scene, renderer, camera, vm } from "../App.vue";
 import { createImagePlane } from "./imagePlane.js";
 import { draw } from "./draw.js";
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue";
+import { SWEEP_SHAPE, clearSweepShapeState } from "./sweepShape.js";
 
 export let canvas, controls, currentShape;
 let raycaster;
@@ -365,6 +380,51 @@ let canvasMirror;
 let geometry = new THREE.PlaneGeometry(5, 5);
 let headGeometry;
 let canvasComponent;
+
+function makeSweepShapeGeometry() {
+  const vertical = new THREE.PlaneGeometry(5, 5);
+  vertical.rotateX(Math.PI / 2);
+  vertical.translate(0, 0, 2.5);
+
+  const top = new THREE.PlaneGeometry(5, 5);
+  top.translate(0, 2.5, 5);
+
+  const verticalPosition = vertical.getAttribute("position");
+  const topPosition = top.getAttribute("position");
+  const verticalIndex = vertical.getIndex().array;
+  const topIndex = top.getIndex().array;
+  const positions = [];
+  const indices = [];
+
+  for (let i = 0; i < verticalPosition.count; i++) {
+    positions.push(
+      verticalPosition.getX(i),
+      verticalPosition.getY(i),
+      verticalPosition.getZ(i)
+    );
+  }
+
+  for (let i = 0; i < topPosition.count; i++) {
+    positions.push(topPosition.getX(i), topPosition.getY(i), topPosition.getZ(i));
+  }
+
+  verticalIndex.forEach((index) => indices.push(index));
+  topIndex.forEach((index) => indices.push(index + verticalPosition.count));
+
+  vertical.dispose();
+  top.dispose();
+
+  const sweepGeometry = new THREE.BufferGeometry();
+  sweepGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+  sweepGeometry.setIndex(indices);
+  sweepGeometry.computeVertexNormals();
+  sweepGeometry.computeBoundingSphere();
+
+  return sweepGeometry;
+}
 
 function cloneHomeTransform(home) {
   return {
@@ -1255,6 +1315,9 @@ export default {
     setCanvasShape(val) {
       this.shape = val;
       currentShape = val;
+      if (val !== SWEEP_SHAPE) {
+        clearSweepShapeState();
+      }
       this.$emit("selected-canvas-shape", val);
       this.shapeSelectionVisibility = false;
     },
@@ -1325,8 +1388,12 @@ export default {
             renderer.render(scene, camera);
           }
           break;
+        case SWEEP_SHAPE:
+          canvas.geometry = makeSweepShapeGeometry();
+          break;
 
         default:
+          canvas.geometry = new THREE.PlaneGeometry(5, 5);
           break;
       }
 
@@ -1489,6 +1556,16 @@ export default {
   padding: 0;
   width: 100%;
   height: 100%;
+}
+
+.shape-text-icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #1c1c1e;
+  font-size: 0.42em;
+  font-weight: 900;
 }
 
 .transform-mode {

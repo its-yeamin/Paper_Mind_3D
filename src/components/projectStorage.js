@@ -3,6 +3,7 @@ import { cameraHomeTarget, scene, renderer, camera } from "../App.vue";
 import { draw } from "./draw.js";
 import { createImagePlane, disposeImagePlane } from "./imagePlane.js";
 import { applyCanvasHomeState, canvas, getCanvasHomeState } from "./Canvas.vue";
+import { clearSweepShapeMeshes, clearSweepShapeState } from "./sweepShape.js";
 
 const DB_NAME = "penzil-projects";
 const DB_VERSION = 1;
@@ -354,6 +355,8 @@ export function normalizeProject(data) {
 }
 
 export function clearProjectScene() {
+  clearSweepShapeMeshes();
+
   const projectObjects = scene.children.filter(
     (obj) =>
       (obj.geometry && obj.geometry.type == "MeshLine" && obj.layers.mask == 2) ||
@@ -383,6 +386,7 @@ export function clearProjectScene() {
 export function restoreProject(data, replace = true) {
   const project = normalizeProject(data);
   restoringProject = true;
+  clearSweepShapeState();
 
   if (replace) {
     clearProjectScene();
