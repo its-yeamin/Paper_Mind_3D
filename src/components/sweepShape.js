@@ -3,6 +3,7 @@ import { scene, renderer, camera } from "../App.vue";
 import { MeshLine, MeshLineMaterial } from "meshline";
 
 const SWEEP_SHAPE = "sweep-shape";
+const SWEEP_CONE = "sweep-cone";
 let pendingPath = undefined;
 
 function getStrokeWorldPoints(strokeObject) {
@@ -34,7 +35,23 @@ function simplifyPoints(points, minDistance = 0.03) {
   return simplified;
 }
 
-function buildSweepGeometry(pathPoints, profilePoints) {
+function getTaperScale(pathIndex, pathLength, taper) {
+  if (!taper) return 1;
+  if (pathLength <= 1) return 1;
+
+  return Math.max(0.03, pathIndex / (pathLength - 1));
+}
+
+function getSweptPoint(sweep, profilePoint, pathPoint, pathIndex) {
+  const scale = getTaperScale(pathIndex, sweep.path.length, sweep.taper);
+  return profilePoint
+    .clone()
+    .sub(sweep.pathEnd)
+    .multiplyScalar(scale)
+    .add(pathPoint);
+}
+
+function buildSweepGeometry(pathPoints, profilePoints, options = {}) {
   const path = simplifyPoints(pathPoints, 0.05);
   let profile = simplifyPoints(profilePoints, 0.03);
 
@@ -52,10 +69,17 @@ function buildSweepGeometry(pathPoints, profilePoints) {
 
   const positions = [];
   const indices = [];
+  const sweep = {
+    path,
+    profile,
+    pathEnd,
+    shouldClose,
+    taper: options.taper === true,
+  };
 
-  path.forEach((pathPoint) => {
+  path.forEach((pathPoint, pathIndex) => {
     profile.forEach((profilePoint) => {
-      const point = profilePoint.clone().sub(pathEnd).add(pathPoint);
+      const point = getSweptPoint(sweep, profilePoint, pathPoint, pathIndex);
       positions.push(point.x, point.y, point.z);
     });
   });
@@ -84,10 +108,8 @@ function buildSweepGeometry(pathPoints, profilePoints) {
   geometry.computeBoundingSphere();
 
   return {
+    ...sweep,
     geometry,
-    path,
-    profile,
-    shouldClose,
   };
 }
 
@@ -148,12 +170,11 @@ function createSweepStrokeGroup(sweep, strokeStyle) {
   const lineWidth = Math.max(0.005, strokeStyle?.lineWidth || 0.02);
   const ringIndexes = sampleIndexes(sweep.path.length, 14);
   const railIndexes = sampleIndexes(sweep.profile.length, 14);
-  const pathEnd = sweep.path[sweep.path.length - 1];
 
   ringIndexes.forEach((pathIndex) => {
     const pathPoint = sweep.path[pathIndex];
     const ring = sweep.profile.map((profilePoint) =>
-      profilePoint.clone().sub(pathEnd).add(pathPoint)
+      getSweptPoint(sweep, profilePoint, pathPoint, pathIndex)
     );
 
     if (sweep.shouldClose) {
@@ -165,8 +186,8 @@ function createSweepStrokeGroup(sweep, strokeStyle) {
 
   railIndexes.forEach((profileIndex) => {
     const profilePoint = sweep.profile[profileIndex];
-    const rail = sweep.path.map((pathPoint) =>
-      profilePoint.clone().sub(pathEnd).add(pathPoint)
+    const rail = sweep.path.map((pathPoint, pathIndex) =>
+      getSweptPoint(sweep, profilePoint, pathPoint, pathIndex)
     );
 
     group.add(createStrokeMesh(rail, color, lineWidth));
@@ -228,7 +249,9 @@ export function deleteSweepMeshesForStroke(strokeUuid) {
 }
 
 export function registerSweepStroke(strokeObject) {
-  if (strokeObject.userData.canvas?.shape !== SWEEP_SHAPE) return;
+  const shape = strokeObject.userData.canvas?.shape;
+  const isSweepShape = shape === SWEEP_SHAPE || shape === SWEEP_CONE;
+  if (!isSweepShape) return;
 
   if (!pendingPath || !scene.getObjectByProperty("uuid", pendingPath.uuid)) {
     pendingPath = strokeObject;
@@ -240,7 +263,8 @@ export function registerSweepStroke(strokeObject) {
   const profile = strokeObject;
   const sweep = buildSweepGeometry(
     getStrokeWorldPoints(path),
-    getStrokeWorldPoints(profile)
+    getStrokeWorldPoints(profile),
+    { taper: shape === SWEEP_CONE }
   );
 
   profile.userData.sweepShape = { role: "profile", pathUuid: path.uuid };
@@ -258,4 +282,4 @@ export function registerSweepStroke(strokeObject) {
   renderer.render(scene, camera);
 }
 
-export { SWEEP_SHAPE };
+export { SWEEP_CONE, SWEEP_SHAPE };

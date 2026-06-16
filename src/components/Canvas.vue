@@ -47,6 +47,9 @@
       <span class="icon-and-label shape-text-icon" v-if="shape === 'sweep-shape'"
         >3D</span
       >
+      <span class="icon-and-label shape-text-icon" v-if="shape === 'sweep-cone'"
+        >Cn</span
+      >
     </span>
     <span
       class="canvas-button transform-mode"
@@ -353,6 +356,17 @@
           <span class="shape-text-icon">3D</span>
         </label>
       </span>
+      <span @click="setCanvasShape('sweep-cone')">
+        <input
+          type="radio"
+          id="shapeSweepCone"
+          name="shape"
+          value="sweep-cone"
+          v-model="shape"
+        /><label for="shapeSweepCone" title="Cone / tapered 3D stroke shape">
+          <span class="shape-text-icon">Cn</span>
+        </label>
+      </span>
     </div>
   </div>
   <div
@@ -372,7 +386,7 @@ import { scene, renderer, camera, vm } from "../App.vue";
 import { createImagePlane } from "./imagePlane.js";
 import { draw } from "./draw.js";
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue";
-import { SWEEP_SHAPE, clearSweepShapeState } from "./sweepShape.js";
+import { SWEEP_CONE, SWEEP_SHAPE, clearSweepShapeState } from "./sweepShape.js";
 
 export let canvas, controls, currentShape;
 let raycaster;
@@ -1181,6 +1195,7 @@ export default {
       canvas.position.copy(transform.position);
       canvas.quaternion.copy(transform.quaternion);
       canvas.scale.copy(transform.scale);
+      canvas.updateMatrixWorld(true);
       this.updateRotationReadout();
       this.updateImagePresentation();
       renderer.render(scene, camera);
@@ -1228,14 +1243,19 @@ export default {
       this.setCanvasShape(shape);
       canvas.position.set(position.x, position.y, position.z);
       canvas.quaternion.set(
-        quaternion.x,
-        quaternion.y,
-        quaternion.z,
-        quaternion.w
+        quaternion.x ?? quaternion._x,
+        quaternion.y ?? quaternion._y,
+        quaternion.z ?? quaternion._z,
+        quaternion.w ?? quaternion._w
       );
       canvas.scale.set(scale.x, scale.y, scale.z);
+      canvas.updateMatrixWorld(true);
       this.updateRotationReadout();
       this.updateImagePresentation();
+      this.$emit("set-camera-home", {
+        center: canvas.position.clone(),
+        resetView: false,
+      });
       renderer.render(scene, camera);
     },
     toggleTransformMode() {
@@ -1315,7 +1335,7 @@ export default {
     setCanvasShape(val) {
       this.shape = val;
       currentShape = val;
-      if (val !== SWEEP_SHAPE) {
+      if (val !== SWEEP_SHAPE && val !== SWEEP_CONE) {
         clearSweepShapeState();
       }
       this.$emit("selected-canvas-shape", val);
@@ -1389,6 +1409,7 @@ export default {
           }
           break;
         case SWEEP_SHAPE:
+        case SWEEP_CONE:
           canvas.geometry = makeSweepShapeGeometry();
           break;
 
