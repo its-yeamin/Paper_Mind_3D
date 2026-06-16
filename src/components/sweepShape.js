@@ -186,6 +186,14 @@ function createSweepStrokeGroup(sweep, strokeStyle) {
   return group;
 }
 
+function hideGuideStroke(strokeObject) {
+  strokeObject.visible = false;
+  strokeObject.userData.sweepShape = {
+    ...strokeObject.userData.sweepShape,
+    hiddenGuide: true,
+  };
+}
+
 export function clearSweepShapeState() {
   pendingPath = undefined;
 }
@@ -245,6 +253,8 @@ export function registerSweepStroke(strokeObject) {
   group.userData.pathUuid = path.uuid;
   group.userData.profileUuid = profile.uuid;
   scene.add(group);
+  hideGuideStroke(path);
+  hideGuideStroke(profile);
   renderer.render(scene, camera);
 }
 
