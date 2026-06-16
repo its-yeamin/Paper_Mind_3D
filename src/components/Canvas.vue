@@ -50,6 +50,9 @@
       <span class="icon-and-label shape-text-icon" v-if="shape === 'sweep-cone'"
         >Cn</span
       >
+      <span class="icon-and-label shape-text-icon" v-if="shape === 'sweep-variable'"
+        >Var</span
+      >
     </span>
     <span
       class="canvas-button transform-mode"
@@ -367,6 +370,17 @@
           <span class="shape-text-icon">Cn</span>
         </label>
       </span>
+      <span @click="setCanvasShape('sweep-variable')">
+        <input
+          type="radio"
+          id="shapeSweepVariable"
+          name="shape"
+          value="sweep-variable"
+          v-model="shape"
+        /><label for="shapeSweepVariable" title="Variable 3D stroke shape">
+          <span class="shape-text-icon">Var</span>
+        </label>
+      </span>
     </div>
   </div>
   <div
@@ -386,7 +400,12 @@ import { scene, renderer, camera, vm } from "../App.vue";
 import { createImagePlane } from "./imagePlane.js";
 import { draw } from "./draw.js";
 import { undoManager, undoRedoComponent } from "./UndoRedo.vue";
-import { SWEEP_CONE, SWEEP_SHAPE, clearSweepShapeState } from "./sweepShape.js";
+import {
+  SWEEP_CONE,
+  SWEEP_SHAPE,
+  SWEEP_VARIABLE,
+  clearSweepShapeState,
+} from "./sweepShape.js";
 
 export let canvas, controls, currentShape;
 let raycaster;
@@ -1335,7 +1354,11 @@ export default {
     setCanvasShape(val) {
       this.shape = val;
       currentShape = val;
-      if (val !== SWEEP_SHAPE && val !== SWEEP_CONE) {
+      if (
+        val !== SWEEP_SHAPE &&
+        val !== SWEEP_CONE &&
+        val !== SWEEP_VARIABLE
+      ) {
         clearSweepShapeState();
       }
       this.$emit("selected-canvas-shape", val);
@@ -1410,6 +1433,7 @@ export default {
           break;
         case SWEEP_SHAPE:
         case SWEEP_CONE:
+        case SWEEP_VARIABLE:
           canvas.geometry = makeSweepShapeGeometry();
           break;
 

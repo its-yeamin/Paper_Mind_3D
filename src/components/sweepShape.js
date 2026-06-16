@@ -4,7 +4,9 @@ import { MeshLine, MeshLineMaterial } from "meshline";
 
 const SWEEP_SHAPE = "sweep-shape";
 const SWEEP_CONE = "sweep-cone";
+const SWEEP_VARIABLE = "sweep-variable";
 let pendingPath = undefined;
+let pendingControl = undefined;
 
 function getStrokeWorldPoints(strokeObject) {
   strokeObject.updateMatrixWorld(true);
@@ -42,8 +44,33 @@ function getTaperScale(pathIndex, pathLength, taper) {
   return Math.max(0.03, pathIndex / (pathLength - 1));
 }
 
+function samplePoint(points, index, targetLength) {
+  if (points.length === 0) return undefined;
+  if (targetLength <= 1 || points.length === 1) return points[0];
+
+  const sourceIndex = Math.round((index / (targetLength - 1)) * (points.length - 1));
+  return points[Math.min(points.length - 1, Math.max(0, sourceIndex))];
+}
+
+function getVariableScale(pathPoint, pathIndex, pathLength, control, maxDistance) {
+  if (!control || maxDistance <= 0.0001) return 1;
+
+  const controlPoint = samplePoint(control, pathIndex, pathLength);
+  if (!controlPoint) return 1;
+
+  return THREE.MathUtils.clamp(pathPoint.distanceTo(controlPoint) / maxDistance, 0.03, 2.5);
+}
+
 function getSweptPoint(sweep, profilePoint, pathPoint, pathIndex) {
-  const scale = getTaperScale(pathIndex, sweep.path.length, sweep.taper);
+  const taperScale = getTaperScale(pathIndex, sweep.path.length, sweep.taper);
+  const variableScale = getVariableScale(
+    pathPoint,
+    pathIndex,
+    sweep.path.length,
+    sweep.control,
+    sweep.maxControlDistance
+  );
+  const scale = taperScale * variableScale;
   return profilePoint
     .clone()
     .sub(sweep.pathEnd)
@@ -51,8 +78,25 @@ function getSweptPoint(sweep, profilePoint, pathPoint, pathIndex) {
     .add(pathPoint);
 }
 
+function getMaxControlDistance(path, control) {
+  if (!control) return 1;
+
+  let maxDistance = 0;
+  path.forEach((pathPoint, index) => {
+    const controlPoint = samplePoint(control, index, path.length);
+    if (controlPoint) {
+      maxDistance = Math.max(maxDistance, pathPoint.distanceTo(controlPoint));
+    }
+  });
+
+  return maxDistance || 1;
+}
+
 function buildSweepGeometry(pathPoints, profilePoints, options = {}) {
   const path = simplifyPoints(pathPoints, 0.05);
+  const control = options.controlPoints
+    ? simplifyPoints(options.controlPoints, 0.05)
+    : undefined;
   let profile = simplifyPoints(profilePoints, 0.03);
 
   if (path.length < 2 || profile.length < 3) return undefined;
@@ -75,6 +119,8 @@ function buildSweepGeometry(pathPoints, profilePoints, options = {}) {
     pathEnd,
     shouldClose,
     taper: options.taper === true,
+    control,
+    maxControlDistance: getMaxControlDistance(path, control),
   };
 
   path.forEach((pathPoint, pathIndex) => {
@@ -161,6 +207,7 @@ function createStrokeMesh(points, color, lineWidth) {
 
   const mesh = new THREE.Mesh(line, material);
   mesh.renderOrder = 2;
+  mesh.layers.set(1);
   return mesh;
 }
 
@@ -202,6 +249,7 @@ function createSweepStrokeGroup(sweep, strokeStyle) {
   });
   const surface = new THREE.Mesh(sweep.geometry, surfaceMaterial);
   surface.renderOrder = 1;
+  surface.layers.set(1);
   group.add(surface);
 
   return group;
@@ -217,6 +265,7 @@ function hideGuideStroke(strokeObject) {
 
 export function clearSweepShapeState() {
   pendingPath = undefined;
+  pendingControl = undefined;
 }
 
 export function clearSweepShapeMeshes() {
@@ -236,6 +285,7 @@ export function deleteSweepMeshesForStroke(strokeUuid) {
       (object) =>
         object.userData.kind === "sweepShape" &&
         (object.userData.pathUuid === strokeUuid ||
+          object.userData.controlUuid === strokeUuid ||
           object.userData.profileUuid === strokeUuid)
     )
     .forEach((object) => {
@@ -246,40 +296,68 @@ export function deleteSweepMeshesForStroke(strokeUuid) {
   if (pendingPath?.uuid === strokeUuid) {
     pendingPath = undefined;
   }
+
+  if (pendingControl?.uuid === strokeUuid) {
+    pendingControl = undefined;
+  }
 }
 
 export function registerSweepStroke(strokeObject) {
   const shape = strokeObject.userData.canvas?.shape;
-  const isSweepShape = shape === SWEEP_SHAPE || shape === SWEEP_CONE;
+  const isSweepShape =
+    shape === SWEEP_SHAPE || shape === SWEEP_CONE || shape === SWEEP_VARIABLE;
   if (!isSweepShape) return;
 
   if (!pendingPath || !scene.getObjectByProperty("uuid", pendingPath.uuid)) {
     pendingPath = strokeObject;
+    pendingControl = undefined;
     strokeObject.userData.sweepShape = { role: "path" };
     return;
   }
 
+  if (shape === SWEEP_VARIABLE && !pendingControl) {
+    pendingControl = strokeObject;
+    strokeObject.userData.sweepShape = {
+      role: "control",
+      pathUuid: pendingPath.uuid,
+    };
+    return;
+  }
+
   const path = pendingPath;
+  const control = pendingControl;
   const profile = strokeObject;
   const sweep = buildSweepGeometry(
     getStrokeWorldPoints(path),
     getStrokeWorldPoints(profile),
-    { taper: shape === SWEEP_CONE }
+    {
+      taper: shape === SWEEP_CONE,
+      controlPoints: control ? getStrokeWorldPoints(control) : undefined,
+    }
   );
 
-  profile.userData.sweepShape = { role: "profile", pathUuid: path.uuid };
+  profile.userData.sweepShape = {
+    role: "profile",
+    pathUuid: path.uuid,
+    controlUuid: control?.uuid,
+  };
   pendingPath = undefined;
+  pendingControl = undefined;
 
   if (!sweep) return;
 
   const group = createSweepStrokeGroup(sweep, profile.userData.stroke);
   group.userData.kind = "sweepShape";
   group.userData.pathUuid = path.uuid;
+  group.userData.controlUuid = control?.uuid;
   group.userData.profileUuid = profile.uuid;
   scene.add(group);
   hideGuideStroke(path);
+  if (control) {
+    hideGuideStroke(control);
+  }
   hideGuideStroke(profile);
   renderer.render(scene, camera);
 }
 
-export { SWEEP_CONE, SWEEP_SHAPE };
+export { SWEEP_CONE, SWEEP_SHAPE, SWEEP_VARIABLE };
