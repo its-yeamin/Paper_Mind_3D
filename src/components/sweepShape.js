@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { scene, renderer, camera } from "../App.vue";
+import { MeshLine, MeshLineMaterial } from "meshline";
 
 const SWEEP_SHAPE = "sweep-shape";
 let pendingPath = undefined;
@@ -82,7 +83,107 @@ function buildSweepGeometry(pathPoints, profilePoints) {
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
 
-  return geometry;
+  return {
+    geometry,
+    path,
+    profile,
+    shouldClose,
+  };
+}
+
+function disposeSweepObject(object) {
+  object.traverse?.((child) => {
+    child.geometry?.dispose();
+    child.material?.dispose();
+  });
+
+  object.geometry?.dispose();
+  object.material?.dispose();
+}
+
+function sampleIndexes(length, maxCount) {
+  if (length <= maxCount) {
+    return Array.from({ length }, (_, index) => index);
+  }
+
+  const indexes = [];
+  const step = (length - 1) / (maxCount - 1);
+
+  for (let i = 0; i < maxCount; i++) {
+    indexes.push(Math.round(i * step));
+  }
+
+  return Array.from(new Set(indexes));
+}
+
+function createStrokeMesh(points, color, lineWidth) {
+  const line = new MeshLine();
+  const vertices = [];
+
+  points.forEach((point) => {
+    vertices.push(point.x, point.y, point.z);
+  });
+
+  line.setPoints(vertices);
+
+  const material = new MeshLineMaterial({
+    lineWidth,
+    sizeAttenuation: 1,
+    color,
+    side: THREE.DoubleSide,
+    depthTest: false,
+    depthWrite: false,
+    transparent: false,
+    opacity: 1,
+  });
+
+  const mesh = new THREE.Mesh(line, material);
+  mesh.renderOrder = 2;
+  return mesh;
+}
+
+function createSweepStrokeGroup(sweep, strokeStyle) {
+  const group = new THREE.Group();
+  const color = new THREE.Color(strokeStyle?.color || 0x4f8cff);
+  const lineWidth = Math.max(0.005, strokeStyle?.lineWidth || 0.02);
+  const ringIndexes = sampleIndexes(sweep.path.length, 14);
+  const railIndexes = sampleIndexes(sweep.profile.length, 14);
+  const pathEnd = sweep.path[sweep.path.length - 1];
+
+  ringIndexes.forEach((pathIndex) => {
+    const pathPoint = sweep.path[pathIndex];
+    const ring = sweep.profile.map((profilePoint) =>
+      profilePoint.clone().sub(pathEnd).add(pathPoint)
+    );
+
+    if (sweep.shouldClose) {
+      ring.push(ring[0].clone());
+    }
+
+    group.add(createStrokeMesh(ring, color, lineWidth));
+  });
+
+  railIndexes.forEach((profileIndex) => {
+    const profilePoint = sweep.profile[profileIndex];
+    const rail = sweep.path.map((pathPoint) =>
+      profilePoint.clone().sub(pathEnd).add(pathPoint)
+    );
+
+    group.add(createStrokeMesh(rail, color, lineWidth));
+  });
+
+  const surfaceMaterial = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const surface = new THREE.Mesh(sweep.geometry, surfaceMaterial);
+  surface.renderOrder = 1;
+  group.add(surface);
+
+  return group;
 }
 
 export function clearSweepShapeState() {
@@ -96,8 +197,7 @@ export function clearSweepShapeMeshes() {
     .filter((object) => object.userData.kind === "sweepShape")
     .forEach((object) => {
       scene.remove(object);
-      object.geometry?.dispose();
-      object.material?.dispose();
+      disposeSweepObject(object);
     });
 }
 
@@ -111,8 +211,7 @@ export function deleteSweepMeshesForStroke(strokeUuid) {
     )
     .forEach((object) => {
       scene.remove(object);
-      object.geometry?.dispose();
-      object.material?.dispose();
+      disposeSweepObject(object);
     });
 
   if (pendingPath?.uuid === strokeUuid) {
@@ -131,7 +230,7 @@ export function registerSweepStroke(strokeObject) {
 
   const path = pendingPath;
   const profile = strokeObject;
-  const geometry = buildSweepGeometry(
+  const sweep = buildSweepGeometry(
     getStrokeWorldPoints(path),
     getStrokeWorldPoints(profile)
   );
@@ -139,24 +238,13 @@ export function registerSweepStroke(strokeObject) {
   profile.userData.sweepShape = { role: "profile", pathUuid: path.uuid };
   pendingPath = undefined;
 
-  if (!geometry) return;
+  if (!sweep) return;
 
-  const material = new THREE.MeshStandardMaterial({
-    color: profile.userData.stroke?.color || 0x4f8cff,
-    transparent: true,
-    opacity: 0.28,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-    roughness: 0.55,
-    metalness: 0,
-  });
-
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.userData.kind = "sweepShape";
-  mesh.userData.pathUuid = path.uuid;
-  mesh.userData.profileUuid = profile.uuid;
-  mesh.renderOrder = 1;
-  scene.add(mesh);
+  const group = createSweepStrokeGroup(sweep, profile.userData.stroke);
+  group.userData.kind = "sweepShape";
+  group.userData.pathUuid = path.uuid;
+  group.userData.profileUuid = profile.uuid;
+  scene.add(group);
   renderer.render(scene, camera);
 }
 

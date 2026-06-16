@@ -387,7 +387,7 @@ function makeSweepShapeGeometry() {
   vertical.translate(0, 0, 2.5);
 
   const top = new THREE.PlaneGeometry(5, 5);
-  top.translate(0, 2.5, 5);
+  top.translate(0, 0, 5);
 
   const verticalPosition = vertical.getAttribute("position");
   const topPosition = top.getAttribute("position");
